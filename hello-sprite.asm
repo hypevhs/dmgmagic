@@ -38,7 +38,6 @@ jp	begin
 ; ****************************************************************************************
 ; header and and hardcoded data
 ; ****************************************************************************************
-; ROM header
 	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 INCLUDE "memory.asm"
 TileData:
@@ -54,9 +53,7 @@ Title:
 TitleEnd:
 
 ; ****************************************************************************************
-; Initialization:
-; set the stack pointer, enable interrupts, set the palette, set the screen relative to the window
-; copy the ASCII character table, clear the screen
+; Initialization
 ; ****************************************************************************************
 begin:
 	nop
@@ -74,12 +71,11 @@ init:
 	ld [rBGP], a		; set background and window pallette
 	ldh [rOBP0], a		; set sprite pallette 0 (choose palette 0 or 1 when describing the sprite)
 	ldh [rOBP1], a		; set sprite pallette 1
-
+	
 	ld a, 0				; SET SCREEN TO TO UPPER RIGHT HAND CORNER
 	ld [rSCX], a
 	ld [rSCY], a
-	;ld a, 7				; why does window coord start at 7? I'll never understand it
-	;ld [rWX], a
+	
 	call StopLCD		; YOU CAN NOT LOAD $8000 WITH LCD ON
 	ld hl, TileData
 	ld de, _VRAM		; $8000
