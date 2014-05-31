@@ -14,6 +14,7 @@ SPEED EQU $0fff
 
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0 ; struct of 4
+	LoByteVar VBLANKED
 	LoByteVar soundCounter
 	LoByteVar scroller
 
@@ -21,7 +22,6 @@ SPEED EQU $0fff
 SECTION	"Vblank", HOME[$0040]
 	jp	DMACODELOC
 SECTION	"LCDC", HOME[$0048]
-	;reti
 	jp LCDC_STAT
 SECTION	"Timer_Overflow", HOME[$0050]
 	reti
@@ -163,9 +163,9 @@ MainLoop:
 	halt
 	nop							; always put NOP after HALT (gbspec.txt lines 514-578)
 	
-	;ld      a,(VblnkFlag)
-	;or      a				; V-Blank interrupt ?
-	;jr      z, MainLoop		; No, some other interrupt
+	ld a, [VBLANKED]
+	or a				; V-Blank interrupt ?
+	jr z, MainLoop		; No, some other interrupt
 	
 	
 	ld	bc,SPEED
@@ -307,6 +307,9 @@ dmacode:
 dma_wait:
 	dec	a
 	jr	nz, dma_wait
+	
+	ld a, 1
+	ld [VBLANKED], a
 	
 	pop hl
 	pop de
