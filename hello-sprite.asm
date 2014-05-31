@@ -324,17 +324,13 @@ dmaend:
 LCDC_STAT:
 	push af
 	push bc
-	push de
-	push hl
 	
 	ld a, [scroller]
 	ld b, $1
-	sub a, b
+	sub b
 	ld [scroller], a
 	ld [rSCX], a
 	
-	pop hl
-	pop de
 	pop bc
 	pop af
 	reti
