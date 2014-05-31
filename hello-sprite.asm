@@ -154,22 +154,24 @@ init:
 ; sprite metadata
 	PutSpriteYAddr Sprite0, 0	; set Sprite0 location to 0,0
 	PutSpriteXAddr Sprite0, 0
-	ld a, 1						; ibmpc1.inc ASCII character 1 is happy face :-)
-	ld [Sprite0TileNum], a		; sprite 1's tile address
-	ld a, %00000000				; set flags (see gbhw.inc lines 33-42)
-	ld [Sprite0Flags], a		; save flags
+	ld a, 1						; happy face :-)
+	ld [Sprite0TileNum], a		; tile address
+	ld a, %00000000				; gbhw.inc 33-42
+	ld [Sprite0Flags], a
 
 MainLoop:
 	halt
-	nop							; always put NOP after HALT (gbspec.txt lines 514-578)
+	nop					; always put NOP after HALT
 	
 	ld a, [VBLANKED]
 	or a				; V-Blank interrupt ?
 	jr z, MainLoop		; No, some other interrupt
 	
+	xor a
+	ld [VBLANKED], a	; clear flag
 	
-	ld	bc,SPEED
-	call	simpleDelay
+	;ld	bc,SPEED
+	;call	simpleDelay
 	
 	call	GetKeys
 	
@@ -308,7 +310,7 @@ dma_wait:
 	dec	a
 	jr	nz, dma_wait
 	
-	ld a, 1
+	ld a, 1				;yes, mister halt, this is vblank calling.
 	ld [VBLANKED], a
 	
 	pop hl
@@ -320,20 +322,20 @@ dmaend:
 ; *hs* END
 
 LCDC_STAT:
-	;push af
-	;push bc
-	;push de
-	;push hl
+	push af
+	push bc
+	push de
+	push hl
 	
-	;ld a, [scroller]
-	;ld b, $1
-	;add a, b
-	;ld [rSCX], a
+	ld a, [scroller]
+	ld b, $1
+	add a, b
+	ld [rSCX], a
 	
-	;pop hl
-	;pop de
-	;pop bc
-	;pop af
+	pop hl
+	pop de
+	pop bc
+	pop af
 	reti
 
 ; ****************************************************************************************
