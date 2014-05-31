@@ -329,7 +329,8 @@ LCDC_STAT:
 	
 	ld a, [scroller]
 	ld b, $1
-	add a, b
+	sub a, b
+	ld [scroller], a
 	ld [rSCX], a
 	
 	pop hl
