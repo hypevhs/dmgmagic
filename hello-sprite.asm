@@ -10,13 +10,15 @@ INCLUDE "gbhw.inc" ; standard hardware definitions from devrs.com
 INCLUDE "ibmpc1.inc" ; ASCII character set from devrs.com
 INCLUDE "sprite.inc" ; specific defs
 
-SPEED EQU $0fff
+Layer1Start EQU $0a * 8
+Layer2Start EQU $0c * 8
+Layer3Start EQU $0e * 8
+Layer4Start EQU $10 * 8
+LayerEnd EQU $12 * 8
 
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0 ; struct of 4
 	LoByteVar VBLANKED
-	LoByteVar soundCounter
-	LoByteVar scroller
 
 ; IRQs
 SECTION	"Vblank", HOME[$0040]
@@ -41,14 +43,26 @@ jp	begin
 	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 INCLUDE "memory.asm"
 TileData:
-	chr_IBMPC1 1, 8 ; entire character set
+	chr_IBMPC1 1, 4 ; some character set
 Title:
-	DB "  Live and learn!   ","            "
-	DB "Hanging on the edge ","            "
-	DB "    of tomorrow     ","            "
-	DB "  Live and learn!   ","            "
-	DB " From the works of  ","            "
-	DB "     yesterday      ","            "
+	DB " ****************** ","            "
+	DB "  * this is the  *  ","            "
+	DB "   **************   ","            "
+	DB "~~~~* parallax *~~~~","            "
+	DB "     **********     ","            "
+	DB "      * demo *      ","            "
+	DB "~~~~~~~~~~~~~~~~~~~~","            "
+	DB "  So please,        ","            "
+	DB "     take a look    ","            "
+	DB "       ",2,"            ","            "
+	DB "11111111111111111111","            "
+	DB "11111111111111111111","            "
+	DB "22222222222222222222","            "
+	DB "22222222222222222222","            "
+	DB "33333333333333333333","            "
+	DB "33333333333333333333","            "
+	DB "44444444444444444444","            "
+	DB "44444444444444444444","            "
 	;  [                    ] 20tiles
 TitleEnd:
 
@@ -79,7 +93,7 @@ init:
 	call StopLCD		; YOU CAN NOT LOAD $8000 WITH LCD ON
 	ld hl, TileData
 	ld de, _VRAM		; $8000
-	ld bc, 8*256		; the ASCII character set: 256 characters, each with 8 bytes of display data
+	ld bc, 8*128		; half of ascii, 8B per char
 	call mem_CopyMono	; load tile data
 
 	ld a,0
@@ -108,12 +122,11 @@ init:
 	ld [Sprite0XAddr], a
 	ld [Sprite0TileNum], a
 	ld [Sprite0Flags], a
-	ld [soundCounter], a
-	ld [scroller], a
+	;ld [scroller], a
 
 ; write those tiles from ROM!
 	ld hl,Title
-	ld de, _SCRN0+(SCRN_VY_B*6)
+	ld de, _SCRN0+(SCRN_VY_B*0)
 	ld bc, TitleEnd-Title
 	call mem_CopyVRAM
 	
@@ -166,8 +179,9 @@ MainLoop:
 	xor a
 	ld [VBLANKED], a	; clear flag
 	
-	;ld	bc,SPEED
-	;call	simpleDelay
+	;reset scroller
+	ld a, $0
+	ld [rSCX], a
 	
 	call	GetKeys
 	
@@ -196,31 +210,11 @@ MainLoop:
 	call	nz,Yflip
 	pop	af
 	
-	ld a, [soundCounter]
-	add $1
-	ld [soundCounter], a
-	ld b, a					; save original
-	and $1					; A=modulus, B=orig
-	jr z, SNDdontinvert		; if even, dontinvert
-	ld a, b					; restore
-	cpl
-	jr SNDset
-SNDdontinvert:
-	ld a, b					; restore good num to a
-SNDset:
-	ld [rNR13], a ; lo frequency
-	
-	;scroller
-	ld a,$0
-	ld [scroller], a
+	; reset scroller
+	;ld a, 40
+	;ld [scroller], a
 	
 	jr	MainLoop
-
-; Wait patiently 'til somebody kills you
-wait:
-	halt
-	nop
-	jr wait
 
 right:
 	GetSpriteXAddr Sprite0
@@ -255,36 +249,6 @@ Yflip:
 	xor OAMF_YFLIP	; toggle flip of sprite vertically
 	ld [Sprite0Flags],a
 	ret
-simpleDelay:
-	dec bc
-	ld a,b
-	or c
-	jr nz, simpleDelay
-	ret
-
-; GetKeys: adapted from APOCNOW.ASM and gbspec.txt
-GetKeys:                 ;gets keypress
-	ld 	a,P1F_5			; set bit 5
-	ld 	[rP1],a			; select P14 by setting it low. See gbspec.txt lines 1019-1095
-	ld 	a,[rP1]
- 	ld 	a,[rP1]			; wait a few cycles
-	cpl				; complement A. "You are a very very nice Accumulator..."
-	and 	$0f			; look at only the first 4 bits
-	swap 	a			; move bits 3-0 into 7-4
-	ld 	b,a			; and store in b
-
- 	ld	a,P1F_4			; select P15
- 	ld 	[rP1],a
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]			; wait for the bouncing to stop
-	cpl					; as before, complement...
- 	and $0f				; and look only for the last 4 bits
- 	or b				; combine with the previous result
- 	ret					; do we need to reset joypad? (gbspec line 1082)
 
 ; *hs* START
 initdma:
@@ -321,15 +285,41 @@ LCDC_STAT:
 	push af
 	push bc
 	
-	ld a, [scroller]
-	ld b, $1
-	sub b
-	ld [scroller], a
-	ld [rSCX], a
+	;if scanline >= Layer1Start
+	
+	;set scroll to 
+	;ld a, [scroller]
+	;dec a
+	;ld [scroller], a
+	;ld [rSCX], a
 	
 	pop bc
 	pop af
 	reti
+
+; GetKeys: adapted from APOCNOW.ASM and gbspec.txt
+GetKeys:                 ;gets keypress
+	ld 	a,P1F_5			; set bit 5
+	ld 	[rP1],a			; select P14 by setting it low. See gbspec.txt lines 1019-1095
+	ld 	a,[rP1]
+ 	ld 	a,[rP1]			; wait a few cycles
+	cpl				; complement A. "You are a very very nice Accumulator..."
+	and 	$0f			; look at only the first 4 bits
+	swap 	a			; move bits 3-0 into 7-4
+	ld 	b,a			; and store in b
+
+ 	ld	a,P1F_4			; select P15
+ 	ld 	[rP1],a
+	ld	a,[rP1]
+	ld	a,[rP1]
+	ld	a,[rP1]
+	ld	a,[rP1]
+	ld	a,[rP1]
+	ld	a,[rP1]			; wait for the bouncing to stop
+	cpl					; as before, complement...
+ 	and $0f				; and look only for the last 4 bits
+ 	or b				; combine with the previous result
+ 	ret					; do we need to reset joypad? (gbspec line 1082)
 
 ; ****************************************************************************************
 ; StopLCD:
