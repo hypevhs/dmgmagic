@@ -1,7 +1,7 @@
 PATH=../rgbds
 ASM=hello-sprite.asm
-TILEGENPY=../tilegen/tg.py
-WAVEGENPY=../tilegen/wavegen.py
+TILEGENPY=./tilegen.py
+WAVEGENPY=./wavegen.py
 WAVEGENPERIOD=60
 WAVEGENAMPLITUDE=78
 WAVEGENOUTPUTFILENAME=wave.bin
