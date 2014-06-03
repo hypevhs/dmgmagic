@@ -19,6 +19,7 @@ LayerEnd EQU $12 * 8
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0 ; struct of 4
 	LoByteVar VBLANKED
+	LoByteVar scroller
 
 ; IRQs
 SECTION	"Vblank", HOME[$0040]
@@ -52,9 +53,9 @@ Title:
 	DB "     **********     ","            "
 	DB "      * demo *      ","            "
 	DB "~~~~~~~~~~~~~~~~~~~~","            "
-	DB "  So please,        ","            "
-	DB "     take a look    ","            "
-	DB "       ",2,"            ","            "
+	DB ".,-'-,.,-'-,.,-'-,.,","            "
+	DB ".,-'-,.,-'-,.,-'-,.,","            "
+	DB ".,-'-,.,-'-,.,-'-,.,","            "
 	DB "11111111111111111111","            "
 	DB "11111111111111111111","            "
 	DB "22222222222222222222","            "
@@ -175,7 +176,6 @@ MainLoop:
 	ld a, [VBLANKED]
 	or a				; V-Blank interrupt ?
 	jr z, MainLoop		; No, some other interrupt
-	
 	xor a
 	ld [VBLANKED], a	; clear flag
 	
@@ -209,10 +209,6 @@ MainLoop:
 	and	PADF_START
 	call	nz,Yflip
 	pop	af
-	
-	; reset scroller
-	;ld a, 40
-	;ld [scroller], a
 	
 	jr	MainLoop
 
@@ -286,12 +282,13 @@ LCDC_STAT:
 	push bc
 	
 	;if scanline >= Layer1Start
-	
 	;set scroll to 
 	;ld a, [scroller]
 	;dec a
 	;ld [scroller], a
-	;ld [rSCX], a
+	ld a, -78
+	ld [scroller], a
+	ld [rSCX], a
 	
 	pop bc
 	pop af
