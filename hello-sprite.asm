@@ -19,6 +19,7 @@ LayerEnd EQU $12 * 8
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0 ; struct of 4
 	LoByteVar VBLANKED
+	LoByteVar scrollStart
 	LoByteVar scroller
 
 ; IRQs
@@ -66,6 +67,10 @@ Title:
 	DB "44444444444444444444","            "
 	;  [                    ] 20tiles
 TitleEnd:
+WaveBytes:
+	incbin "wave.bin"
+WaveBytesEnd:
+WaveBytesLength EQU WaveBytesEnd - WaveBytes
 
 ; ****************************************************************************************
 ; Initialization
@@ -123,7 +128,8 @@ init:
 	ld [Sprite0XAddr], a
 	ld [Sprite0TileNum], a
 	ld [Sprite0Flags], a
-	;ld [scroller], a
+	ld [scroller], a
+	ld [scrollStart], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -179,9 +185,15 @@ MainLoop:
 	xor a
 	ld [VBLANKED], a	; clear flag
 	
-	;reset scroller
+	;reset scroll
 	ld a, $0
 	ld [rSCX], a
+	
+	; animation time!
+	ld a, [scrollStart]
+	inc a
+	ld [scrollStart], a
+	ld [scroller], a
 	
 	call	GetKeys
 	
@@ -279,18 +291,28 @@ dmaend:
 
 LCDC_STAT:
 	push af
+	push hl
 	push bc
 	
-	;if scanline >= Layer1Start
-	;set scroll to 
-	;ld a, [scroller]
-	;dec a
-	;ld [scroller], a
-	ld a, -78
+	; scroller is an index in the WaveBytes
+	ld a, [scroller]
+	inc a
 	ld [scroller], a
+	
+	; move index to c
+	ld c, a
+	ld b, 0
+	; hl has the address of the start
+	ld hl, WaveBytes
+	; hl has the address of the indexed byte
+	add hl, bc 
+	; a has the sin byte
+	ld a, [hl]
+	; move the sin byte to the scroller HWR
 	ld [rSCX], a
 	
 	pop bc
+	pop hl
 	pop af
 	reti
 
