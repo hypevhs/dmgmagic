@@ -271,7 +271,7 @@ dmacode:
 	push de
 	push hl
 	
-	ld	a, OAMDATALOCBANK		; bank where OAM DATA is stored
+	ld	a, OAMDATALOCBANK	; bank where OAM DATA is stored
 	ldh	[rDMA], a			; Start DMA
 	ld	a, $28				; 160ns
 dma_wait:
@@ -294,22 +294,16 @@ LCDC_STAT:
 	push hl
 	push bc
 	
-	; scroller is an index in the WaveBytes
-	ld a, [scroller]
+	ld a, [scroller]	; scroller is an index in the WaveBytes
 	inc a
 	ld [scroller], a
 	
-	; move index to c
-	ld c, a
+	ld c, a				; move index to c
 	ld b, 0
-	; hl has the address of the start
-	ld hl, WaveBytes
-	; hl has the address of the indexed byte
-	add hl, bc 
-	; a has the sin byte
-	ld a, [hl]
-	; move the sin byte to the scroller HWR
-	ld [rSCX], a
+	ld hl, WaveBytes	; hl = data start addr
+	add hl, bc			; hl = indexed byte addr
+	ld a, [hl]			; a = sin byte
+	ld [rSCX], a		; move the sin byte to the scroller HWR
 	
 	pop bc
 	pop hl
@@ -317,28 +311,28 @@ LCDC_STAT:
 	reti
 
 ; GetKeys: adapted from APOCNOW.ASM and gbspec.txt
-GetKeys:                 ;gets keypress
-	ld 	a,P1F_5			; set bit 5
-	ld 	[rP1],a			; select P14 by setting it low. See gbspec.txt lines 1019-1095
-	ld 	a,[rP1]
- 	ld 	a,[rP1]			; wait a few cycles
+GetKeys:			; gets keypress
+	ld a, P1F_5		; set bit 5
+	ld [rP1], a		; select P14 by setting it low. See gbspec.txt lines 1019-1095
+	ld a, [rP1]
+ 	ld a, [rP1]		; wait a few cycles
 	cpl				; complement A. "You are a very very nice Accumulator..."
-	and 	$0f			; look at only the first 4 bits
-	swap 	a			; move bits 3-0 into 7-4
-	ld 	b,a			; and store in b
+	and $0f			; look at only the first 4 bits
+	swap a			; move bits 3-0 into 7-4
+	ld b,a			; and store in b
 
- 	ld	a,P1F_4			; select P15
- 	ld 	[rP1],a
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]
-	ld	a,[rP1]			; wait for the bouncing to stop
-	cpl					; as before, complement...
- 	and $0f				; and look only for the last 4 bits
- 	or b				; combine with the previous result
- 	ret					; do we need to reset joypad? (gbspec line 1082)
+ 	ld a, P1F_4		; select P15
+ 	ld [rP1], a
+	ld a, [rP1]
+	ld a, [rP1]
+	ld a, [rP1]
+	ld a, [rP1]
+	ld a, [rP1]
+	ld a, [rP1]		; wait for the bouncing to stop
+	cpl				; as before, complement...
+	and $0f			; and look only for the last 4 bits
+	or b			; combine with the previous result
+	ret				; do we need to reset joypad? (gbspec line 1082)
 
 ; ****************************************************************************************
 ; StopLCD:
@@ -346,21 +340,18 @@ GetKeys:                 ;gets keypress
 ; and wait until the LCD is off
 ; ****************************************************************************************
 StopLCD:
-        ld      a,[rLCDC]
-        rlca                    ; Put the high bit of LCDC into the Carry flag
-        ret     nc              ; Screen is off already. Exit.
+	ld a,[rLCDC]
+	rlca			; Put the high bit of LCDC into the Carry flag
+	ret nc			; Screen is off already. Exit.
 
 ; Loop until we are in VBlank
-
 .wait:
-        ld      a,[rLY]
-        cp      145             ; Is display on scan line 145 yet?
-        jr      nz,.wait        ; no, keep waiting
+	ld a, [rLY]
+	cp 145			; Is display on scan line 145 yet?
+	jr nz, .wait	; no, keep waiting
 
 ; Turn off the LCD
-
-        ld      a,[rLCDC]
-        res     7,a             ; Reset bit 7 of LCDC
-        ld      [rLCDC],a
-
-        ret
+	ld a, [rLCDC]
+	res 7, a		; Reset bit 7 of LCDC
+	ld [rLCDC], a
+	ret
