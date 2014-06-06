@@ -17,7 +17,7 @@ Layer4Start EQU $10 * 8
 LayerEnd EQU $12 * 8
 
 ; create variables. make sure to use tab (why??)
-	SpriteAttr Sprite0		; struct of 4
+	SpriteAttr Sprite0
 	LoByteVar VBLANKED
 	LoByteVar scrollStart
 	LoByteVar scroller
