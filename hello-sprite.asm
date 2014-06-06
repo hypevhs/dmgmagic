@@ -17,31 +17,31 @@ Layer4Start EQU $10 * 8
 LayerEnd EQU $12 * 8
 
 ; create variables. make sure to use tab (why??)
-	SpriteAttr Sprite0 ; struct of 4
+	SpriteAttr Sprite0		; struct of 4
 	LoByteVar VBLANKED
 	LoByteVar scrollStart
 	LoByteVar scroller
 
 ; IRQs
-SECTION	"Vblank", HOME[$0040]
-	jp	DMACODELOC
-SECTION	"LCDC", HOME[$0048]
+SECTION "Vblank", HOME[$0040]
+	jp DMACODELOC
+SECTION "LCDC", HOME[$0048]
 	jp LCDC_STAT
-SECTION	"Timer_Overflow", HOME[$0050]
+SECTION "Timer_Overflow", HOME[$0050]
 	reti
-SECTION	"Serial", HOME[$0058]
+SECTION "Serial", HOME[$0058]
 	reti
-SECTION	"p1thru4", HOME[$0060]
+SECTION "p1thru4", HOME[$0060]
 	reti
 
 ; boot loader jumps to here.
-SECTION	"start",HOME[$0100]
+SECTION "start", HOME[$0100]
 nop
-jp	begin
+jp begin
 
-; ****************************************************************************************
+; *****************************************************************************
 ; header and and hardcoded data
-; ****************************************************************************************
+; *****************************************************************************
 	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 INCLUDE "memory.asm"
 TileData:
@@ -72,9 +72,9 @@ WaveBytes:
 WaveBytesEnd:
 WaveBytesLength EQU WaveBytesEnd - WaveBytes
 
-; ****************************************************************************************
+; *****************************************************************************
 ; Initialization
-; ****************************************************************************************
+; *****************************************************************************
 begin:
 	nop
 	di
@@ -83,14 +83,14 @@ begin:
 ; NEXT FOUR LINES FOR SETTING UP SPRITES *hs*
 	call initdma			; move routine to HRAM
 	ld a, IEF_LCDC | IEF_VBLANK
-	ld [rIE], a				; ENABLE ONLY VBLANK INTERRUPT (lol no, enable lcdc too)
+	ld [rIE], a				; ENABLE VBLANK INTERRUPT (and lcdc)
 	ei						; LET THE INTS FLY
 
 init:
 	ld a, %11100100		; Window palette colors, from darkest to lightest
 	ld [rBGP], a		; set background and window pallette
-	ldh [rOBP0], a		; set sprite pallette 0 (choose palette 0 or 1 when describing the sprite)
-	ldh [rOBP1], a		; set sprite pallette 1
+	ldh [rOBP0], a		; set sprite pallette 0
+	ldh [rOBP1], a		; 1 (choose palette 0 or 1 when describing the sprite)
 	
 	ld a, 0				; SET SCREEN TO TO UPPER RIGHT HAND CORNER
 	ld [rSCX], a
@@ -107,21 +107,16 @@ init:
 	ld bc,OAMDATALENGTH
 	call mem_Set		; *hs* erase sprite table
 
-	ld a, LCDCF_ON|LCDCF_BG8000|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON;|LCDCF_BG9800|LCDCF_WIN9C00|LCDCF_WINON ; *hs* see gbspec.txt lines 1525-1565 and gbhw.inc lines 70-86
-	; 11110011
+	ld a, LCDCF_ON|LCDCF_BG8000|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
 	ld [rLCDC], a
 
 	ld a, 32			; ascii for space
 	ld hl, _SCRN0
 	ld bc, SCRN_VX_B * SCRN_VY_B
 	call mem_SetVRAM
-	;ld a, 32			; ascii for space
-	;ld hl, _SCRN1
-	;ld bc, SCRN_VX_B * SCRN_VY_B
-	;call mem_SetVRAM
-; ****************************************************************************************
+; *****************************************************************************
 ; Main code
-; ****************************************************************************************
+; *****************************************************************************
 ; general init
 	ld a, $0
 	ld [Sprite0YAddr], a
@@ -158,7 +153,7 @@ init:
 	ld a, %01111111 ; DDLLLLLL - Duty (00:12.5% 01:25% 10:50% 11:75%), length
 	ld [rNR11], a ; set duty and length 
 	
-	ld a, %00111000 ; VVVVDSSS - initial value, 0=dec 1=inc, number of env sweep
+	ld a, %00111000 ; VVVVDSSS - initial value, 0=dec 1=inc, num of env sweep
 	ld [rNR12], a ; envelope
 	
 	ld a, %01111111
@@ -226,44 +221,44 @@ MainLoop:
 
 right:
 	GetSpriteXAddr Sprite0
-	cp SCRN_X-8		; already on RHS of screen?
+	cp SCRN_X - 8	; already on RHS of screen?
 	ret z
 	inc a
-	PutSpriteXAddr Sprite0,a
+	PutSpriteXAddr Sprite0, a
 	ret
 left:
 	GetSpriteXAddr Sprite0
 	cp 0			; already on LHS of screen?
 	ret z
 	dec a
-	PutSpriteXAddr Sprite0,a
-	ret	
+	PutSpriteXAddr Sprite0, a
+	ret
 up:
 	GetSpriteYAddr Sprite0
 	cp 0			; already at top of screen?
 	ret z
 	dec a
-	PutSpriteYAddr Sprite0,a
+	PutSpriteYAddr Sprite0, a
 	ret
 down:
 	GetSpriteYAddr Sprite0
-	cp SCRN_Y-8		; already at bottom of screen?
+	cp SCRN_Y - 8	; already at bottom of screen?
 	ret z
 	inc a
-	PutSpriteYAddr Sprite0,a
+	PutSpriteYAddr Sprite0, a
 	ret
 Yflip:
-	ld a,[Sprite0Flags]
+	ld a, [Sprite0Flags]
 	xor OAMF_YFLIP	; toggle flip of sprite vertically
-	ld [Sprite0Flags],a
+	ld [Sprite0Flags], a
 	ret
 
 ; *hs* START
 initdma:
-	ld	de, DMACODELOC
-	ld	hl, dmacode
-	ld	bc, dmaend-dmacode
-	call	mem_CopyVRAM			; copy when VRAM is available
+	ld de, DMACODELOC
+	ld hl, dmacode
+	ld bc, dmaend-dmacode
+	call mem_CopyVRAM	; copy when VRAM is available
 	ret
 dmacode:
 	push af
@@ -271,12 +266,12 @@ dmacode:
 	push de
 	push hl
 	
-	ld	a, OAMDATALOCBANK	; bank where OAM DATA is stored
-	ldh	[rDMA], a			; Start DMA
-	ld	a, $28				; 160ns
+	ld a, OAMDATALOCBANK	; bank where OAM DATA is stored
+	ldh [rDMA], a			; Start DMA
+	ld a, $28				; 160ns
 dma_wait:
-	dec	a
-	jr	nz, dma_wait
+	dec a
+	jr nz, dma_wait
 	
 	ld a, 1				;yes, mister halt, this is vblank calling.
 	ld [VBLANKED], a
@@ -313,7 +308,7 @@ LCDC_STAT:
 ; GetKeys: adapted from APOCNOW.ASM and gbspec.txt
 GetKeys:			; gets keypress
 	ld a, P1F_5		; set bit 5
-	ld [rP1], a		; select P14 by setting it low. See gbspec.txt lines 1019-1095
+	ld [rP1], a		; select P14 by setting it low
 	ld a, [rP1]
  	ld a, [rP1]		; wait a few cycles
 	cpl				; complement A. "You are a very very nice Accumulator..."
@@ -334,24 +329,17 @@ GetKeys:			; gets keypress
 	or b			; combine with the previous result
 	ret				; do we need to reset joypad? (gbspec line 1082)
 
-; ****************************************************************************************
 ; StopLCD:
-; turn off LCD if it is on
-; and wait until the LCD is off
-; ****************************************************************************************
+; turn off LCD if it is on and wait until the LCD is off
 StopLCD:
 	ld a,[rLCDC]
 	rlca			; Put the high bit of LCDC into the Carry flag
 	ret nc			; Screen is off already. Exit.
-
-; Loop until we are in VBlank
-.wait:
+.wait:				; Loop until we are in VBlank
 	ld a, [rLY]
 	cp 145			; Is display on scan line 145 yet?
 	jr nz, .wait	; no, keep waiting
-
-; Turn off the LCD
-	ld a, [rLCDC]
+	ld a, [rLCDC]	; Turn off the LCD
 	res 7, a		; Reset bit 7 of LCDC
 	ld [rLCDC], a
 	ret
