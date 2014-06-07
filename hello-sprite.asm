@@ -45,26 +45,27 @@ jp begin
 	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
 INCLUDE "memory.asm"
 TileData:
-	chr_IBMPC1 1, 4 ; some character set
+	chr_IBMPC1 1, 8 ; some character set
+TileDataEnd:
 Title:
-	DB " ****************** ","            "
-	DB "  * this is the  *  ","            "
-	DB "   **************   ","            "
-	DB "~~~~* parallax *~~~~","            "
-	DB "     **********     ","            "
-	DB "      * demo *      ","            "
-	DB "~~~~~~~~~~~~~~~~~~~~","            "
-	DB ".,-'-,.,-'-,.,-'-,.,","            "
-	DB ".,-'-,.,-'-,.,-'-,.,","            "
-	DB ".,-'-,.,-'-,.,-'-,.,","            "
-	DB "11111111111111111111","            "
-	DB "11111111111111111111","            "
-	DB "22222222222222222222","            "
-	DB "22222222222222222222","            "
-	DB "33333333333333333333","            "
-	DB "33333333333333333333","            "
-	DB "44444444444444444444","            "
-	DB "44444444444444444444","            "
+	DB " ****************** ","????????????"
+	DB "  * this is the  *  ","????????????"
+	DB "   **************   ","????????????"
+	DB "~~~~* parallax *~~~~","????????????"
+	DB "     **********     ","????????????"
+	DB "      * demo *      ","????????????"
+	DB "~~~~~~~~~~~~~~~~~~~~","????????????"
+	DB ".,-'-,.,-'-,.,-'-,.,","????????????"
+	DB ".,-'-,.,-'-,.,-'-,.,","????????????"
+	DB ".,-'-,.,-'-,.,-'-,.,","????????????"
+	DB "11111111111111111111","????????????"
+	DB "11111111111111111111","????????????"
+	DB "22222222222222222222","????????????"
+	DB "22222222222222222222","????????????"
+	DB "33333333333333333333","????????????"
+	DB "33333333333333333333","????????????"
+	DB "44444444444444444444","????????????"
+	DB "44444444444444444444","????????????"
 	;  [                    ] 20tiles
 TitleEnd:
 WaveBytes:
@@ -99,7 +100,7 @@ init:
 	call StopLCD		; YOU CAN NOT LOAD $8000 WITH LCD ON
 	ld hl, TileData
 	ld de, _VRAM		; $8000
-	ld bc, 8*128		; half of ascii, 8B per char
+	ld bc, TileDataEnd - TileData
 	call mem_CopyMono	; load tile data
 
 	ld a,0
@@ -183,6 +184,7 @@ MainLoop:
 	;reset scroll
 	ld a, $0
 	ld [rSCX], a
+	ld [rSCY], a
 	
 	; animation time!
 	ld a, [scrollStart]
@@ -299,6 +301,8 @@ LCDC_STAT:
 	add hl, bc			; hl = indexed byte addr
 	ld a, [hl]			; a = sin byte
 	ld [rSCX], a		; move the sin byte to the scroller HWR
+	sra a
+	ld [rSCY], a
 	
 	pop bc
 	pop hl
