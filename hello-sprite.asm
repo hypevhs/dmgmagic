@@ -19,8 +19,8 @@ LayerEnd EQU $12 * 8
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0
 	LoByteVar VBLANKED
-	LoByteVar scrollStart
-	LoByteVar scroller
+	LoByteVar scrollX
+	LoByteVar scrollXLCDC
 
 ; IRQs
 SECTION "Vblank", HOME[$0040]
@@ -48,32 +48,34 @@ TileData:
 	chr_IBMPC1 1, 4 ; some character set
 TileDataEnd:
 Title:
-	DB " ****************** ????????????"
-	DB "  * this is the  *  ????????????"
-	DB "   **************   ????????????"
-	DB "~~~~* parallax *~~~~????????????"
-	DB "     **********     ????????????"
-	DB "      * demo *      ????????????"
-	DB "~~~~~~~~~~~~~~~~~~~~????????????"
-	DB ".,-'-,.,-'-,.,-'-,.,????????????"
-	DB ".,-'-,.,-'-,.,-'-,.,????????????"
-	DB ".,-'-,.,-'-,.,-'-,.,????????????"
-	DB "11111111111111111111????????????"
-	DB "11111111111111111111????????????"
-	DB "22222222222222222222????????????"
-	DB "22222222222222222222????????????"
-	DB "33333333333333333333????????????"
-	DB "33333333333333333333????????????"
-	DB "44444444444444444444????????????"
-	DB "44444444444444444444????????????"
 	;  [                    ] 20tiles
+	DB "                    ????????????"
+	DB "                    ????????????"
+	DB "                    ????????????"
+	DB "                    ????????????"
+	DB "                    ????????????"
+	DB "                    ????????????"
+	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
+	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
+	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
+	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
+	DB $82,$81,$82,$80,$80,$81,$82,$81,$80,$82,$80,$81,$80,$80,$80,$82,$82,$80,$81,$82,$82,$80,$82,$82,$82,$82,$81,$80,$82,$80,$80,$81
+	DB $81,$80,$81,$80,$82,$82,$82,$81,$80,$82,$81,$82,$80,$81,$80,$81,$81,$81,$80,$81,$81,$80,$81,$80,$82,$82,$82,$81,$82,$82,$82,$82
+	DB $82,$80,$82,$81,$82,$82,$80,$81,$82,$81,$80,$81,$81,$80,$80,$81,$81,$82,$80,$82,$80,$82,$80,$81,$82,$80,$80,$80,$80,$80,$81,$80
+	DB $81,$82,$82,$81,$82,$81,$82,$80,$80,$82,$82,$82,$80,$82,$80,$82,$81,$81,$82,$81,$80,$80,$81,$80,$80,$80,$80,$80,$80,$81,$80,$80
+	DB $80,$80,$80,$82,$81,$80,$82,$81,$81,$81,$80,$80,$81,$81,$80,$82,$82,$82,$80,$80,$80,$81,$82,$82,$82,$80,$81,$81,$80,$80,$82,$81
+	
+	DB $83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83
+	DB $84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84
+	
+	DB $81,$82,$80,$82,$82,$81,$82,$81,$82,$81,$82,$80,$81,$82,$80,$81,$80,$80,$82,$80,$80,$82,$80,$80,$81,$81,$81,$81,$80,$81,$80,$82
 TitleEnd:
 GameTile:
-GameTile_TrackLow:	incbin "tile_tracklow.png.2bp"
-GameTile_TrackHi:	incbin "tile_trackhi.png.2bp"
 GameTile_Dirt0:		incbin "tile_dirt0.png.2bp"
 GameTile_Dirt1:		incbin "tile_dirt1.png.2bp"
 GameTile_Dirt2:		incbin "tile_dirt2.png.2bp"
+GameTile_TrackHi:	incbin "tile_trackhi.png.2bp"
+GameTile_TrackLow:	incbin "tile_tracklow.png.2bp"
 GameTileEnd:
 
 ; *****************************************************************************
@@ -132,8 +134,8 @@ init:
 	ld [Sprite0XAddr], a
 	ld [Sprite0TileNum], a
 	ld [Sprite0Flags], a
-	ld [scroller], a
-	ld [scrollStart], a
+	ld [scrollX], a
+	ld [scrollXLCDC], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -189,15 +191,15 @@ MainLoop:
 	xor a
 	ld [VBLANKED], a	; clear flag
 	
-	;reset scroll
+	;reset parallax counter
 	ld a, $0
-	ld [rSCX], a
+	ld [scrollXLCDC], a
 	
 	; animation time!
-	ld a, [scrollStart]
+	ld a, [scrollX]
 	inc a
-	ld [scrollStart], a
-	ld [scroller], a
+	ld [scrollX], a
+	ld [rSCX], a
 	
 	call	GetKeys
 	
@@ -282,7 +284,7 @@ dma_wait:
 	dec a
 	jr nz, dma_wait
 	
-	ld a, 1				;yes, mister halt, this is vblank calling.
+	ld a, 1				; yes, mister halt, this is vblank calling.
 	ld [VBLANKED], a
 	
 	pop hl
@@ -294,13 +296,26 @@ dmaend:
 ; *hs* END
 
 LCDC_STAT:
-	;push af
-	;push hl
-	;push bc
+	push af
+	push hl
+	push bc
 	
-	;pop bc
-	;pop hl
-	;pop af
+	; if line > 80 and line % 4 == 0, increment scroller
+	; reading from the rSCX is maybe undefined data,
+	; so we use an intermediate var, scrollXLCDC
+	ld a, [rLY]			; read scanline
+	ld h, 80
+	cp h				; if scanLine >= 80
+	jp C, endLCDC		; if scanLine < 80, go to the end
+	
+	;ld a, [scrollXLCDC]	; load current scroll value
+	;ld [rSCX], a		; then set it as scroll var
+	
+	
+endLCDC:
+	pop bc
+	pop hl
+	pop af
 	reti
 
 ; GetKeys: adapted from APOCNOW.ASM and gbspec.txt
