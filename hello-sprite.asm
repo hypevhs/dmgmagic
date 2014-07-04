@@ -19,8 +19,7 @@ LayerEnd EQU $12 * 8
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0
 	LoByteVar VBLANKED
-	LoByteVar scrollX
-	LoByteVar scrollXLCDC
+	LoWordVar scrollX
 
 ; IRQs
 SECTION "Vblank", HOME[$0040]
@@ -49,16 +48,18 @@ TileData:
 TileDataEnd:
 Title:
 	;  [                    ] 20tiles
-	DB "                    ????????????"
-	DB "                    ????????????"
-	DB "                    ????????????"
-	DB "                    ????????????"
-	DB "                    ????????????"
-	DB "                    ????????????"
-	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
-	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
-	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
-	DB ".,-'-,.,-'-,.,-'-,.,-'-,.,-'-,.,"
+	DB "                                "
+	DB "                                "
+	DB "                                "
+	DB "                                "
+	DB "                                "
+	DB "                                "
+	
+	DB "                                "
+	DB $85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88
+	DB $89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c
+	DB $8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90
+	
 	DB $82,$81,$82,$80,$80,$81,$82,$81,$80,$82,$80,$81,$80,$80,$80,$82,$82,$80,$81,$82,$82,$80,$82,$82,$82,$82,$81,$80,$82,$80,$80,$81
 	DB $81,$80,$81,$80,$82,$82,$82,$81,$80,$82,$81,$82,$80,$81,$80,$81,$81,$81,$80,$81,$81,$80,$81,$80,$82,$82,$82,$81,$82,$82,$82,$82
 	DB $82,$80,$82,$81,$82,$82,$80,$81,$82,$81,$80,$81,$81,$80,$80,$81,$81,$82,$80,$82,$80,$82,$80,$81,$82,$80,$80,$80,$80,$80,$81,$80
@@ -76,6 +77,20 @@ GameTile_Dirt1:		incbin "tile_dirt1.png.2bp"
 GameTile_Dirt2:		incbin "tile_dirt2.png.2bp"
 GameTile_TrackHi:	incbin "tile_trackhi.png.2bp"
 GameTile_TrackLow:	incbin "tile_tracklow.png.2bp"
+GameTileMnt:
+GameTile_Mnt00:		incbin "tile_mnt00.png.2bp"
+GameTile_Mnt10:		incbin "tile_mnt10.png.2bp"
+GameTile_Mnt20:		incbin "tile_mnt20.png.2bp"
+GameTile_Mnt30:		incbin "tile_mnt30.png.2bp"
+GameTile_Mnt01:		incbin "tile_mnt01.png.2bp"
+GameTile_Mnt11:		incbin "tile_mnt11.png.2bp"
+GameTile_Mnt21:		incbin "tile_mnt21.png.2bp"
+GameTile_Mnt31:		incbin "tile_mnt31.png.2bp"
+GameTile_Mnt02:		incbin "tile_mnt02.png.2bp"
+GameTile_Mnt12:		incbin "tile_mnt12.png.2bp"
+GameTile_Mnt22:		incbin "tile_mnt22.png.2bp"
+GameTile_Mnt32:		incbin "tile_mnt32.png.2bp"
+GameTileMntEnd:
 GameTileEnd:
 
 ; *****************************************************************************
@@ -135,7 +150,6 @@ init:
 	ld [Sprite0TileNum], a
 	ld [Sprite0Flags], a
 	ld [scrollX], a
-	ld [scrollXLCDC], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -191,14 +205,24 @@ MainLoop:
 	xor a
 	ld [VBLANKED], a	; clear flag
 	
-	;reset parallax counter
-	ld a, $0
-	ld [scrollXLCDC], a
-	
 	; animation time!
 	ld a, [scrollX]
-	inc a
+	ld c, a
+	ld a, [scrollX+1]
+	ld b, a
+	inc bc
+	ld a, b
+	ld [scrollX+1], a
+	ld a, c
 	ld [scrollX], a
+	
+	;sra a
+	;sra a
+	srl b
+	rr c
+	srl b
+	rr c
+	ld a, c
 	ld [rSCX], a
 	
 	call	GetKeys
@@ -298,25 +322,94 @@ dmaend:
 LCDC_STAT:
 	push af
 	push hl
+	push de
 	push bc
 	
-	; if line > 80 and line % 4 == 0, increment scroller
-	; reading from the rSCX is maybe undefined data,
-	; so we use an intermediate var, scrollXLCDC
 	ld a, [rLY]			; read scanline
-	ld h, 80
-	cp h				; if scanLine >= 80
+	ld h, 80-1			; -1 because I'm using way too many clock cycles
+	cp h
 	jp C, endLCDC		; if scanLine < 80, go to the end
 	
-	;ld a, [scrollXLCDC]	; load current scroll value
-	;ld [rSCX], a		; then set it as scroll var
+	ld h, 122
+	cp h
+	jp NC, endLCDC		; if scanline >= 122, go to the end
 	
+	ld hl, 0			; clear hl dunno...
+	
+	sub 75
+	ld h, a				; h = scanline - 56
+	
+	ld a, [scrollX]
+	ld e, a
+	ld a, [scrollX+1]
+	ld d, a				; de = scrollX 16bit
+	
+	ld a, h				; a = (scanline - 56)
+	sra a				; a = (scanline - 56) >> 1
+	ld c, a				; h = ^^
+	ld b, 0
+	call Mul16			; hl = (scrollX * (scanline - 56) >> 1)
+	
+	srl h
+	rr l
+	srl h
+	rr l
+	srl h
+	rr l				; hl = (scrollX * (scanline - 56) >> 1) >> 3
+	
+	ld a, l				; a = low order bits
+	
+	ld [rSCX], a		; then set it as scroll var
 	
 endLCDC:
 	pop bc
+	pop de
 	pop hl
 	pop af
 	reti
+
+Mul8b:					; this routine performs the operation HL=H*E
+	ld d, 0				; clearing D and L
+	ld l, d
+	ld b, 8				; we have 8 bits
+Mul8bLoop:
+	add hl, hl			; advancing a bit
+	jp nc, Mul8bSkip	; if zero, we skip the addition (jp is used for speed)
+	add hl, de			; adding to the product if necessary
+Mul8bSkip:
+	dec b
+	jp nz, Mul8bLoop
+	ret
+
+Mul16:					; This routine performs the operation DEHL=BC*DE
+	ld hl, 0
+	ld a, 16
+Mul16Loop:
+	add hl, hl
+	rl e
+	rl d
+	jp nc, NoMul16
+	add hl, bc
+	jp nc, NoMul16
+	inc de				; This instruction (with the jump) is like an "ADC DE,0"
+NoMul16:
+	dec a
+	jp nz, Mul16Loop
+	ret
+
+;Div8:				; this routine performs the operation HL=HL/D
+;	xor a			; clearing the upper 8 bits of AHL
+;	ld b,16			; the length of the dividend (16 bits)
+;Div8Loop:
+;	add hl,hl		; advancing a bit
+;	rla
+;	cp d			; checking if the divisor divides the digits chosen (in A)
+;	jp c,Div8NextBit; if not, advancing without subtraction
+;	sub d			; subtracting the divisor
+;	inc l			; and setting the next digit of the quotient
+;Div8NextBit:
+;	djnz Div8Loop
+;	ret
 
 ; GetKeys: adapted from APOCNOW.ASM and gbspec.txt
 GetKeys:			; gets keypress
