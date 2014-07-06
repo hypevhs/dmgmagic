@@ -10,11 +10,9 @@ INCLUDE "gbhw.inc" ; standard hardware definitions from devrs.com
 INCLUDE "ibmpc1.inc" ; ASCII character set from devrs.com
 INCLUDE "sprite.inc" ; specific defs
 
-Layer1Start EQU $0a * 8
-Layer2Start EQU $0c * 8
-Layer3Start EQU $0e * 8
-Layer4Start EQU $10 * 8
-LayerEnd EQU $12 * 8
+LayerGrassStart EQU $0a * 8
+LayerTrackStart EQU $0c * 8
+ScreenHeight EQU $12 * 8
 
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0
@@ -157,7 +155,7 @@ init:
 	ld bc, TitleEnd-Title
 	call mem_CopyVRAM
 	
-	;um hi, make hblank trigger lcdc interrupt
+;um hi, make hblank trigger lcdc interrupt
 	ld	a, STATF_MODE00
 	ld	[rSTAT], a
 
@@ -205,7 +203,7 @@ MainLoop:
 	xor a
 	ld [VBLANKED], a	; clear flag
 	
-	; animation time!
+	; 16-bit scroller variable increment 
 	ld a, [scrollX]
 	ld c, a
 	ld a, [scrollX+1]
@@ -216,12 +214,10 @@ MainLoop:
 	ld a, c
 	ld [scrollX], a
 	
-	;sra a
-	;sra a
 	srl b
 	rr c
 	srl b
-	rr c
+	rr c				; mountains move at 1/4 pixels per second
 	ld a, c
 	ld [rSCX], a
 	
