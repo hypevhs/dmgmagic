@@ -291,37 +291,6 @@ Yflip:
 	ld [Sprite0Flags], a
 	ret
 
-; *hs* START
-initdma:
-	ld de, DMACODELOC
-	ld hl, dmacode
-	ld bc, dmaend-dmacode
-	call mem_CopyVRAM	; copy when VRAM is available
-	ret
-dmacode:
-	push af
-	push bc
-	push de
-	push hl
-	
-	ld a, OAMDATALOCBANK	; bank where OAM DATA is stored
-	ldh [rDMA], a			; Start DMA
-	ld a, $28				; 160ns
-dma_wait:
-	dec a
-	jr nz, dma_wait
-	
-	ld a, 1				; yes, mister halt, this is vblank calling.
-	ld [VBLANKED], a
-	
-	pop hl
-	pop de
-	pop bc
-	pop af
-	reti
-dmaend:
-; *hs* END
-
 LCDC_STAT:
 	push af
 	push hl
