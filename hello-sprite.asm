@@ -17,14 +17,15 @@ LoRamBase	SET	LoRamBase+(\2)
 
 PLXStart EQU $0a * 8
 PLXEnd EQU $0f * 8
+PLXLength EQU PLXEnd - PLXStart
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
 
 ; create variables. make sure to use tab (why??)
+	LoNVar plxTable, PLXLength ; keep this at the top, I need it 00 aligned
 	SpriteAttr Sprite0
 	LoByteVar VBLANKED
 	LoWordVar scrollX
-	LoNVar asdf, 10
 
 ; IRQs
 SECTION "Vblank", HOME[$0040]
@@ -228,6 +229,8 @@ MainLoop:
 	ld a, c
 	ld [rSCX], a		; mountains move at 1/4 pixels per second
 	
+	call PLXTable		; generate parallax table
+	
 	call	GetKeys
 	
 	push	af
@@ -291,22 +294,24 @@ Yflip:
 	ld [Sprite0Flags], a
 	ret
 
-LCDC_STAT:
-	push af
+; *****************************************************************************
+; PLXTable - compute each scanline's scroll value
+; *****************************************************************************
+PLXTable::
+	;PLXStart EQU $0a * 8				80
+	;PLXEnd EQU $0f * 8					120
+	;PLXLength EQU PLXEnd - PLXStart	40
+	;PLXOffset EQU 75
+	;ScreenHeight EQU $12 * 8
+	;LoNVar plxTable, PLXLength
+	xor a
+	ld hl, plxTable
+.loop:
+	push af			; save relative scanline
+	add PLXStart	; make it absolute scanline
 	push hl
-	push de
-	push bc
 	
-	ld a, [rLY]			; read scanline
-	ld h, PLXStart-1	; -1 because I'm using way too many clock cycles
-	cp h
-	jp C, endLCDC		; if scanLine < LayerGrassStart, go to the end
-	
-	ld h, PLXEnd
-	cp h
-	jp NC, endLCDC		; if scanline >= LayerTrackStart, go to the end
-	
-	ld hl, 0			; clear hl dunno...
+	;call PLXLine	; a = scroll value
 	
 	sub PLXOffset
 	ld h, a				; h = scanline - 75
@@ -318,7 +323,7 @@ LCDC_STAT:
 	
 	ld a, h				; a = (scanline - 75)
 	sra a				; a = (scanline - 75) >> 1
-	ld c, a				; h = ^^
+	ld c, a				; c = ^^
 	ld b, 0
 	call Mul16			; hl = (scrollX * (scanline - 75) >> 1)
 	
@@ -329,13 +334,49 @@ LCDC_STAT:
 	srl h
 	rr l				; hl = (scrollX * (scanline - 75) >> 1) >> 3
 	
-	ld a, l				; a = low order bits
+	ld a, l				; a = LSB of that function
+	
+	pop hl
+	ld [hl+], a		; save to ram at index, increment hl
+	ld [hl+], a		; each scroll layer is 2px
+	ld [hl+], a		; layer is 3px... comment me out if you can spare cycles
+	ld [hl+], a		; layer is 4px... comment me out if you can spare cycles
+	pop af			; restore relative scanline
+	inc a
+	inc a
+	inc a			; 3px comment me out if you can spare cycles
+	inc a			; 4px comment me out if you can spare cycles
+	cp a, PLXLength
+	jr nz, .loop
+	ret
+
+LCDC_STAT:
+	push af
+	push hl
+	;push de
+	;push bc
+	
+	ld a, [rLY]			; read scanline
+	ld h, PLXStart		; would be -1; too many clock cycles. let's not...
+	cp h
+	jp C, endLCDC		; if scanLine < LayerGrassStart, go to the end
+	
+	ld h, PLXEnd
+	cp h
+	jp NC, endLCDC		; if scanline >= LayerTrackStart, go to the end
+	
+	; read from the array
+	sub PLXStart		; a = index
+	ld hl, plxTable		; hopefully the LSB of the location of plxTable in mem
+	add a, l			; is low enough that this add doesn't overflow
+	ld l, a
+	ld a, [hl]			; load that byte
 	
 	ld [rSCX], a		; then set it as scroll var
 	
 endLCDC:
-	pop bc
-	pop de
+	;pop bc
+	;pop de
 	pop hl
 	pop af
 	reti
