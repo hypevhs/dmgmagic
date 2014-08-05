@@ -20,12 +20,15 @@ PLXEnd EQU $0f * 8
 PLXLength EQU PLXEnd - PLXStart
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
+songTimerSpeed EQU 6 ; this is just what famitracker uses
 
 ; create variables. make sure to use tab (why??)
 	LoNVar plxTable, PLXLength ; keep this at the top, I need it 00 aligned
 	SpriteAttr Sprite0
 	LoByteVar VBLANKED
 	LoWordVar scrollX
+	LoWordVar songPtr
+	LoByteVar songTimer
 
 ; IRQs
 SECTION "Vblank", HOME[$0040]
@@ -98,6 +101,27 @@ GameTile_Mnt22:		incbin "tile_mnt22.png.2bp"
 GameTile_Mnt32:		incbin "tile_mnt32.png.2bp"
 GameTileMntEnd:
 GameTileEnd:
+SoundNotesCh1:
+	DB %10110000, %00000110			; g3
+	DB %00000000, %00000000			; ---
+	DB %10110000, %00000110			; g3
+	DB %00000000, %00000000			; ---
+	DB %11100110, %00000110			; a#3
+	DB %00000000, %00000000			; ---
+	DB %00100000, %00000111			; d4
+	DB %00000000, %00000000			; ---
+	DB %00111000, %00000111			; e4
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00100000, %00000111			; d4
+	DB %00000000, %00000000			; ---
+EndSoundNotesCh1:
+; snd frequency = ~(131072 / Hz - 1)
+; g3 - 11010110000
+; a#3- 11011100110 - 466.16
+; d4 - 11100100000 - 587.33
+; e4 - 11100111000 - 659.25
 
 ; *****************************************************************************
 ; Initialization
@@ -156,6 +180,10 @@ init:
 	ld [Sprite0TileNum], a
 	ld [Sprite0Flags], a
 	ld [scrollX], a
+	ld [scrollX+1], a
+	ld [songPtr], a
+	ld [songPtr+1], a
+	ld [songTimer], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -168,28 +196,22 @@ init:
 	ld	[rSTAT], a
 
 ; you want sound? too bad. here crash.
-	ld a, $00 ;$80
+	ld a, $80
 	ld [rNR52], a ; turn OFF sound system
-	
 	ld a, $ff
 	ld [rNR50], a ; turn on both speakers
-	
 	ld a, $ff
 	ld [rNR51], a ; direct all channels to all speakers
 	
 ; sound ch1
 	ld a, %00000000
 	ld [rNR10], a ; no sweep
-	
-	ld a, %01111111 ; DDLLLLLL - Duty (00:12.5% 01:25% 10:50% 11:75%), length
+	ld a, %01000000 ; DDLLLLLL - Duty (00:12.5% 01:25% 10:50% 11:75%), length
 	ld [rNR11], a ; set duty and length 
-	
-	ld a, %00111000 ; VVVVDSSS - initial value, 0=dec 1=inc, num of env sweep
+	ld a, %11110000 ; VVVVDSSS - initial value, 0=dec 1=inc, num of env sweep
 	ld [rNR12], a ; envelope
-	
-	ld a, %01111111
+	ld a, %00001001
 	ld [rNR13], a ; lo frequency
-	
 	ld a, %10000110 ; IC...FFF - Initial, counter, hi frequency
 	ld [rNR14], a ; pull the trigger
 
@@ -210,6 +232,8 @@ MainLoop:
 	jr z, MainLoop		; No, some other interrupt
 	xor a
 	ld [VBLANKED], a	; clear flag
+	
+	call music
 	
 	; 16-bit scroller variable increment 
 	ld a, [scrollX]
@@ -294,16 +318,32 @@ Yflip:
 	ld [Sprite0Flags], a
 	ret
 
+music::
+	; decrement songTimer
+	ld hl, songTimer
+	ld a, [hl]
+	dec a
+	; if songTimer is not zero, we don't need to update sound
+	jp nz, .notyet
+	; reset the timer for later
+	ld [hl], songTimerSpeed
+	; set the useless sound registers
+	; load the byte from songPtr's loc into the low freq
+	; load the byte from songPtr+1's loc...
+	; ...set the "trigger" bit...
+	; ...and into the high freq/trigger register
+	; increment the songPtr
+.done:
+	ret
+.notyet:
+	; write the new value of songTimer
+	ld [hl], a
+	ret
+
 ; *****************************************************************************
 ; PLXTable - compute each scanline's scroll value
 ; *****************************************************************************
 PLXTable::
-	;PLXStart EQU $0a * 8				80
-	;PLXEnd EQU $0f * 8					120
-	;PLXLength EQU PLXEnd - PLXStart	40
-	;PLXOffset EQU 75
-	;ScreenHeight EQU $12 * 8
-	;LoNVar plxTable, PLXLength
 	xor a
 	ld hl, plxTable
 .loop:
