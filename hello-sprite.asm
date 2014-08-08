@@ -15,20 +15,20 @@ LoNVar:	MACRO
 LoRamBase	SET	LoRamBase+(\2)
 		ENDM
 
-PLXStart EQU $0a * 8
-PLXEnd EQU $0f * 8
-PLXLength EQU PLXEnd - PLXStart
+PLXStart EQU $0a * 8 ; 80
+PLXEnd EQU $0f * 8 ; 120
+PLXLength EQU PLXEnd - PLXStart ; 40
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
 songTimerSpeed EQU 6 ; this is just what famitracker uses
 
 ; create variables. make sure to use tab (why??)
-	LoNVar plxTable, PLXLength ; keep this at the top, I need it 00 aligned
 	SpriteAttr Sprite0
-	LoByteVar VBLANKED
-	LoWordVar scrollX
-	LoWordVar songPtr
-	LoByteVar songTimer
+	LoNVar plxTable, PLXLength ; c0a0 @40
+	LoByteVar VBLANKED ; c0c8 @1
+	LoWordVar scrollX ; c0c9 @2
+	LoWordVar songPtr ; c0cb @2
+	LoByteVar songTimer ; c0cd @1
 
 ; IRQs
 SECTION "Vblank", HOME[$0040]
@@ -181,9 +181,15 @@ init:
 	ld [Sprite0Flags], a
 	ld [scrollX], a
 	ld [scrollX+1], a
-	ld [songPtr], a
-	ld [songPtr+1], a
 	ld [songTimer], a
+	
+; sound pointer init
+	; TODO: FIX ENDIANNESS
+	ld hl, SoundNotesCh1
+	ld a, h
+	ld [songPtr], a
+	ld a, l
+	ld [songPtr+1], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -328,11 +334,45 @@ music::
 	; reset the timer for later
 	ld [hl], songTimerSpeed
 	; set the useless sound registers
-	; load the byte from songPtr's loc into the low freq
-	; load the byte from songPtr+1's loc...
-	; ...set the "trigger" bit...
+	ld a, %00000000 ; no sweep
+	ld [rNR10], a
+	ld a, %01000000 ; duty 25%, length 0
+	ld [rNR11], a
+	ld a, %11110000 ; max volume, no envelope
+	ld [rNR12], a
+	
+	; load the byte from songPtr's deref'd loc...
+	; TODO: FIX ENDIANNESS
+	ld a, [songPtr]
+	ld h, a
+	ld a, [songPtr+1]
+	ld l, a ; hl contains songPtr word
+	
+	ld a, [hl]
+	ld b, a
+	inc hl
+	ld a, [hl]
+	ld h, b
+	ld l, a ; hl contains dereferenced songPtr word. h=lofreq, l=hifreq
+	; ...into the low freq
+	ld a, h
+	ld [rNR13], a
+	; load the byte from songPtr+1's loc, set the "trigger" bit...
+	ld a, l
+	and %10000000
 	; ...and into the high freq/trigger register
-	; increment the songPtr
+	ld [rNR14], a
+	; increment the songPtr and save it
+	ld a, [songPtr]
+	ld h, a
+	ld a, [songPtr+1]
+	ld l, a ; hl contains songPtr word
+	inc hl
+	inc hl ; 1word=2bytes
+	ld a, l
+	ld [songPtr+1], a
+	ld a, h
+	ld [songPtr], a
 .done:
 	ret
 .notyet:
@@ -350,8 +390,6 @@ PLXTable::
 	push af			; save relative scanline
 	add PLXStart	; make it absolute scanline
 	push hl
-	
-	;call PLXLine	; a = scroll value
 	
 	sub PLXOffset
 	ld h, a				; h = scanline - 75
@@ -393,8 +431,6 @@ PLXTable::
 LCDC_STAT:
 	push af
 	push hl
-	;push de
-	;push bc
 	
 	ld a, [rLY]			; read scanline
 	ld h, PLXStart		; would be -1; too many clock cycles. let's not...
@@ -415,8 +451,6 @@ LCDC_STAT:
 	ld [rSCX], a		; then set it as scroll var
 	
 endLCDC:
-	;pop bc
-	;pop de
 	pop hl
 	pop af
 	reti
