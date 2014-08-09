@@ -102,23 +102,45 @@ GameTile_Mnt32:		incbin "tile_mnt32.png.2bp"
 GameTileMntEnd:
 GameTileEnd:
 SoundNotesCh1:
-	DB %10110000, %00000110			; g3
+REPT 100
+	DB %10110010, %00000110			; g3  
 	DB %00000000, %00000000			; ---
-	DB %10110000, %00000110			; g3
+	DB %10110010, %00000110			; g3
 	DB %00000000, %00000000			; ---
-	DB %11100110, %00000110			; a#3
+	DB %11100111, %00000110			; a#3
 	DB %00000000, %00000000			; ---
-	DB %00100000, %00000111			; d4
+	DB %00100001, %00000111			; d4 
 	DB %00000000, %00000000			; ---
-	DB %00111000, %00000111			; e4
+	DB %00111001, %00000111			; e4 
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
-	DB %00100000, %00000111			; d4
+	DB %00100001, %00000111			; d4 
 	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %10001001, %00000110			; f3
+	DB %00000000, %00000000			; ---
+	DB %11010110, %00000110			; a3
+	DB %00000000, %00000000			; ---
+	DB %00100001, %00000111			; d4  
+	DB %00000000, %00000000			; ---
+	DB %00111001, %00000111			; e4  
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00100001, %00000111			; d4
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+	DB %00000000, %00000000			; ---
+ENDR
 EndSoundNotesCh1:
 ; snd frequency = ~(131072 / Hz - 1)
-; g3 - 11010110000
+; f3 - 11010000111 - 349.23
+; g3 - 11010110000 - 392.00
+; a3 - 11011010101 - 440.00
 ; a#3- 11011100110 - 466.16
 ; d4 - 11100100000 - 587.33
 ; e4 - 11100111000 - 659.25
@@ -174,22 +196,23 @@ init:
 ; Main code
 ; *****************************************************************************
 ; general init
-	ld a, $0
+	xor a
 	ld [Sprite0YAddr], a
 	ld [Sprite0XAddr], a
 	ld [Sprite0TileNum], a
 	ld [Sprite0Flags], a
 	ld [scrollX], a
 	ld [scrollX+1], a
-	ld [songTimer], a
 	
 ; sound pointer init
-	; TODO: FIX ENDIANNESS
 	ld hl, SoundNotesCh1
 	ld a, h
-	ld [songPtr], a
-	ld a, l
 	ld [songPtr+1], a
+	ld a, l
+	ld [songPtr], a ; little endian
+	
+	ld a, songTimerSpeed
+	ld [songTimer], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -333,19 +356,11 @@ music::
 	jp nz, .notyet
 	; reset the timer for later
 	ld [hl], songTimerSpeed
-	; set the useless sound registers
-	ld a, %00000000 ; no sweep
-	ld [rNR10], a
-	ld a, %01000000 ; duty 25%, length 0
-	ld [rNR11], a
-	ld a, %11110000 ; max volume, no envelope
-	ld [rNR12], a
 	
 	; load the byte from songPtr's deref'd loc...
-	; TODO: FIX ENDIANNESS
-	ld a, [songPtr]
-	ld h, a
 	ld a, [songPtr+1]
+	ld h, a
+	ld a, [songPtr]
 	ld l, a ; hl contains songPtr word
 	
 	ld a, [hl]
@@ -354,25 +369,45 @@ music::
 	ld a, [hl]
 	ld h, b
 	ld l, a ; hl contains dereferenced songPtr word. h=lofreq, l=hifreq
+	; check if we need to skip it
+	
+	ld a, l
+	and a
+	jp nz, .oknote
+	ld a, h
+	and a
+	jp nz, .oknote
+	; uh oh this is a silent note, let's bail
+	jp .nochange
+	
+.oknote:
+	; set the useless sound registers
+	ld a, %00000000 ; no sweep
+	ld [rNR10], a
+	ld a, %01000000 ; duty 25%, length 0
+	ld [rNR11], a
+	ld a, %11110000 ; max volume, no envelope
+	ld [rNR12], a
 	; ...into the low freq
 	ld a, h
 	ld [rNR13], a
 	; load the byte from songPtr+1's loc, set the "trigger" bit...
 	ld a, l
-	and %10000000
+	or %10000000
 	; ...and into the high freq/trigger register
 	ld [rNR14], a
+.nochange:
 	; increment the songPtr and save it
-	ld a, [songPtr]
-	ld h, a
 	ld a, [songPtr+1]
+	ld h, a
+	ld a, [songPtr]
 	ld l, a ; hl contains songPtr word
 	inc hl
-	inc hl ; 1word=2bytes
+	inc hl ; 1 tracker note = 2bytes
 	ld a, l
-	ld [songPtr+1], a
-	ld a, h
 	ld [songPtr], a
+	ld a, h
+	ld [songPtr+1], a
 .done:
 	ret
 .notyet:
