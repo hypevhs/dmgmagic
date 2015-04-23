@@ -86,19 +86,7 @@ GameTile_Dirt1:		incbin "tile_dirt1.png.2bp"
 GameTile_Dirt2:		incbin "tile_dirt2.png.2bp"
 GameTile_TrackHi:	incbin "tile_trackhi.png.2bp"
 GameTile_TrackLow:	incbin "tile_tracklow.png.2bp"
-GameTileMnt:
-GameTile_Mnt00:		incbin "tile_mnt00.png.2bp"
-GameTile_Mnt10:		incbin "tile_mnt10.png.2bp"
-GameTile_Mnt20:		incbin "tile_mnt20.png.2bp"
-GameTile_Mnt30:		incbin "tile_mnt30.png.2bp"
-GameTile_Mnt01:		incbin "tile_mnt01.png.2bp"
-GameTile_Mnt11:		incbin "tile_mnt11.png.2bp"
-GameTile_Mnt21:		incbin "tile_mnt21.png.2bp"
-GameTile_Mnt31:		incbin "tile_mnt31.png.2bp"
-GameTile_Mnt02:		incbin "tile_mnt02.png.2bp"
-GameTile_Mnt12:		incbin "tile_mnt12.png.2bp"
-GameTile_Mnt22:		incbin "tile_mnt22.png.2bp"
-GameTile_Mnt32:		incbin "tile_mnt32.png.2bp"
+GameTileMnt:		incbin "tile_mnt1.png.2bp"
 GameTileMntEnd:
 GameTileEnd:
 SoundNotesCh1:
