@@ -7,11 +7,15 @@ import png
 import binascii
 
 def main():
-	if len(sys.argv) != 2:
+	if len(sys.argv) == 1:
 		print("no png filename specified")
 		return
-	pngFileName = sys.argv[1]
 	
+	for fileIndex in range(1, len(sys.argv)):
+		pngFileName = sys.argv[fileIndex]
+		doFile(pngFileName)
+
+def doFile(pngFileName):
 	print("readfile: {0}".format(pngFileName))
 	pngFile = open(pngFileName, "rb")
 	reader = png.Reader(pngFile)
