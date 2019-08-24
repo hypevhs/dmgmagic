@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # convert a png into 8bpp tile data for inclusion
 
@@ -31,8 +31,8 @@ def doFile(pngFileName):
 		return
 	pixels = list(rgbdata[2])
 	
-	widthInTiles = width / 8
-	heightInTiles = height / 8
+	widthInTiles = width // 8
+	heightInTiles = height // 8
 	
 	for tilesRow in range(heightInTiles):
 		for tilesCol in range(widthInTiles):
@@ -83,7 +83,7 @@ def doFile(pngFileName):
 			# for this 8x8 subtile
 			# loop through gbPixels
 			howManyBits = 8*8*2
-			howManyBytes = howManyBits/8
+			howManyBytes = howManyBits//8
 			outputBytes = bytearray(howManyBytes)
 			row = 0
 			while row < 8:
