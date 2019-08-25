@@ -1,4 +1,4 @@
-ASM=hello-sprite.asm
+ASM=main.asm
 OBJ="$(ASM).o"
 ROM="$(ASM).gb"
 SYM="$(ROM).sym"
