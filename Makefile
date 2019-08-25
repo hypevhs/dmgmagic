@@ -12,3 +12,6 @@ $(ROM):
 	rgbasm -o $(OBJ) $(ASM)
 	rgblink -o $(ROM) -n $(SYM) $(OBJ)
 	rgbfix -vp 0xFF $(ROM)
+
+deploy: $(ROM)
+	cp $(ROM) $(SYM) /mnt/shared
