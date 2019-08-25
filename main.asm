@@ -20,15 +20,12 @@ PLXEnd EQU $0f * 8 ; 120
 PLXLength EQU PLXEnd - PLXStart ; 40
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
-songTimerSpeed EQU 6 ; this is just what famitracker uses
 
 ; create variables. make sure to use tab (why??)
 	SpriteAttr Sprite0
 	LoNVar plxTable, PLXLength ; c0a0 @40
 	LoByteVar VBLANKED ; c0c8 @1
 	LoWordVar scrollX ; c0c9 @2
-	LoWordVar songPtr ; c0cb @2
-	LoByteVar songTimer ; c0cd @1
 
 ; IRQs
 SECTION "Vblank", HOME[$0040]
@@ -89,49 +86,6 @@ GameTile_TrackLow:	incbin "tile_tracklow.png.2bp"
 GameTileMnt:		incbin "tile_mnt1.png.2bp"
 GameTileMntEnd:
 GameTileEnd:
-SoundNotesCh1:
-REPT 100
-	DB %10110010, %00000110			; g3
-	DB %00000000, %00000000			; ---
-	DB %10110010, %00000110			; g3
-	DB %00000000, %00000000			; ---
-	DB %11100111, %00000110			; a#3
-	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4
-	DB %00000000, %00000000			; ---
-	DB %00111001, %00000111			; e4
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %10001001, %00000110			; f3
-	DB %00000000, %00000000			; ---
-	DB %11010110, %00000110			; a3
-	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4
-	DB %00000000, %00000000			; ---
-	DB %00111001, %00000111			; e4
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-	DB %00000000, %00000000			; ---
-ENDR
-EndSoundNotesCh1:
-; snd frequency = ~(131072 / Hz - 1)
-; f3 - 11010000111 - 349.23
-; g3 - 11010110000 - 392.00
-; a3 - 11011010101 - 440.00
-; a#3- 11011100110 - 466.16
-; d4 - 11100100000 - 587.33
-; e4 - 11100111000 - 659.25
 
 ; *****************************************************************************
 ; Initialization
@@ -192,16 +146,6 @@ init:
 	ld [scrollX], a
 	ld [scrollX+1], a
 
-; sound pointer init
-	ld hl, SoundNotesCh1
-	ld a, h
-	ld [songPtr+1], a
-	ld a, l
-	ld [songPtr], a ; little endian
-
-	ld a, songTimerSpeed
-	ld [songTimer], a
-
 ; write those tiles from ROM!
 	ld hl,Title
 	ld de, _SCRN0+(SCRN_VY_B*0)
@@ -211,26 +155,6 @@ init:
 ;um hi, make hblank trigger lcdc interrupt
 	ld	a, STATF_MODE00
 	ld	[rSTAT], a
-
-; you want sound? too bad. here crash.
-	ld a, $80
-	ld [rNR52], a ; turn OFF sound system
-	ld a, $ff
-	ld [rNR50], a ; turn on both speakers
-	ld a, $ff
-	ld [rNR51], a ; direct all channels to all speakers
-
-; sound ch1
-	ld a, %00000000
-	ld [rNR10], a ; no sweep
-	ld a, %01000000 ; DDLLLLLL - Duty (00:12.5% 01:25% 10:50% 11:75%), length
-	ld [rNR11], a ; set duty and length
-	ld a, %11110000 ; VVVVDSSS - initial value, 0=dec 1=inc, num of env sweep
-	ld [rNR12], a ; envelope
-	ld a, %00001001
-	ld [rNR13], a ; lo frequency
-	ld a, %10000110 ; IC...FFF - Initial, counter, hi frequency
-	ld [rNR14], a ; pull the trigger
 
 ; sprite metadata
 	PutSpriteYAddr Sprite0, 0	; set Sprite0 location to 0,0
@@ -249,8 +173,6 @@ MainLoop:
 	jr z, MainLoop		; No, some other interrupt
 	xor a
 	ld [VBLANKED], a	; clear flag
-
-	call music
 
 	; 16-bit scroller variable increment
 	ld a, [scrollX]
@@ -333,74 +255,6 @@ Yflip:
 	ld a, [Sprite0Flags]
 	xor OAMF_YFLIP	; toggle flip of sprite vertically
 	ld [Sprite0Flags], a
-	ret
-
-music::
-	; decrement songTimer
-	ld hl, songTimer
-	ld a, [hl]
-	dec a
-	; if songTimer is not zero, we don't need to update sound
-	jp nz, .notyet
-	; reset the timer for later
-	ld [hl], songTimerSpeed
-
-	; load the byte from songPtr's deref'd loc...
-	ld a, [songPtr+1]
-	ld h, a
-	ld a, [songPtr]
-	ld l, a ; hl contains songPtr word
-
-	ld a, [hl]
-	ld b, a
-	inc hl
-	ld a, [hl]
-	ld h, b
-	ld l, a ; hl contains dereferenced songPtr word. h=lofreq, l=hifreq
-	; check if we need to skip it
-
-	ld a, l
-	and a
-	jp nz, .oknote
-	ld a, h
-	and a
-	jp nz, .oknote
-	; uh oh this is a silent note, let's bail
-	jp .nochange
-
-.oknote:
-	; set the useless sound registers
-	ld a, %00000000 ; no sweep
-	ld [rNR10], a
-	ld a, %01000000 ; duty 25%, length 0
-	ld [rNR11], a
-	ld a, %11110000 ; max volume, no envelope
-	ld [rNR12], a
-	; ...into the low freq
-	ld a, h
-	ld [rNR13], a
-	; load the byte from songPtr+1's loc, set the "trigger" bit...
-	ld a, l
-	or %10000000
-	; ...and into the high freq/trigger register
-	ld [rNR14], a
-.nochange:
-	; increment the songPtr and save it
-	ld a, [songPtr+1]
-	ld h, a
-	ld a, [songPtr]
-	ld l, a ; hl contains songPtr word
-	inc hl
-	inc hl ; 1 tracker note = 2bytes
-	ld a, l
-	ld [songPtr], a
-	ld a, h
-	ld [songPtr+1], a
-.done:
-	ret
-.notyet:
-	; write the new value of songTimer
-	ld [hl], a
 	ret
 
 ; *****************************************************************************
