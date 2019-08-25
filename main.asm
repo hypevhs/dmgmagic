@@ -10,37 +10,53 @@ INCLUDE "gbhw.inc" ; standard hardware definitions from devrs.com
 INCLUDE "ibmpc1.inc" ; ASCII character set from devrs.com
 INCLUDE "sprite.inc" ; specific defs
 
-LoNVar:	MACRO
-\1		EQU	LoRamBase
-LoRamBase	SET	LoRamBase+(\2)
-		ENDM
-
+; constants
 PLXStart EQU $0a * 8 ; 80
 PLXEnd EQU $0f * 8 ; 120
 PLXLength EQU PLXEnd - PLXStart ; 40
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
 
-; create variables. make sure to use tab (why??)
+; RAM variables
+SECTION "RAM", WRAM0
 	SpriteAttr Sprite0
-	LoNVar plxTable, PLXLength ; c0a0 @40
-	LoByteVar VBLANKED ; c0c8 @1
-	LoWordVar scrollX ; c0c9 @2
+OAMData:	DS $a0				; shitty macro protection
+plxTable:	DS PLXLength
+VBLANKED:	DS 1
+scrollX:	DS 2
 
-; IRQs
-SECTION "Vblank", HOME[$0040]
+; RST jump vectors
+SECTION "Org $0000", ROM0[$0000]
+RST_00:		jp $100
+SECTION "Org $0008", ROM0[$0008]
+RST_08:		jp $100
+SECTION "Org $0010", ROM0[$0010]
+RST_10:		jp $100
+SECTION "Org $0018", ROM0[$0018]
+RST_18:		jp $100
+SECTION "Org $0020", ROM0[$0020]
+RST_20:		jp $100
+SECTION "Org $0028", ROM0[$0028]
+RST_28:		jp $100
+SECTION "Org $0030", ROM0[$0030]
+RST_30:		jp $100
+SECTION "Org $0038", ROM0[$0038]
+RST_38:		jp $100
+
+; Interrupts
+SECTION "VBlank", ROM0[$0040]
 	jp DMACODELOC
-SECTION "LCDC", HOME[$0048]
+SECTION "LCDC", ROM0[$0048]
 	jp LCDC_STAT
-SECTION "Timer_Overflow", HOME[$0050]
+SECTION "Timer", ROM0[$0050]
 	reti
-SECTION "Serial", HOME[$0058]
+SECTION "Serial", ROM0[$0058]
 	reti
-SECTION "p1thru4", HOME[$0060]
+SECTION "p1thru4", ROM0[$0060]
 	reti
 
 ; boot loader jumps to here.
-SECTION "start", HOME[$0100]
+SECTION "start", ROM0[$0100]
 nop
 jp begin
 
