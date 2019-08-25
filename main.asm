@@ -63,21 +63,21 @@ Title:
 	DB "                                "
 	DB "                                "
 	DB "                                "
-	
+
 	DB "                                "
 	DB $85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88
 	DB $89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c
 	DB $8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90
-	
+
 	DB $82,$81,$82,$80,$80,$81,$82,$81,$80,$82,$80,$81,$80,$80,$80,$82,$82,$80,$81,$82,$82,$80,$82,$82,$82,$82,$81,$80,$82,$80,$80,$81
 	DB $81,$80,$81,$80,$82,$82,$82,$81,$80,$82,$81,$82,$80,$81,$80,$81,$81,$81,$80,$81,$81,$80,$81,$80,$82,$82,$82,$81,$82,$82,$82,$82
 	DB $82,$80,$82,$81,$82,$82,$80,$81,$82,$81,$80,$81,$81,$80,$80,$81,$81,$82,$80,$82,$80,$82,$80,$81,$82,$80,$80,$80,$80,$80,$81,$80
 	DB $81,$82,$82,$81,$82,$81,$82,$80,$80,$82,$82,$82,$80,$82,$80,$82,$81,$81,$82,$81,$80,$80,$81,$80,$80,$80,$80,$80,$80,$81,$80,$80
 	DB $80,$80,$80,$82,$81,$80,$82,$81,$81,$81,$80,$80,$81,$81,$80,$82,$82,$82,$80,$80,$80,$81,$82,$82,$82,$80,$81,$81,$80,$80,$82,$81
-	
+
 	DB $83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83,$83
 	DB $84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84,$84
-	
+
 	DB $81,$82,$80,$82,$82,$81,$82,$81,$82,$81,$82,$80,$81,$82,$80,$81,$80,$80,$82,$80,$80,$82,$80,$80,$81,$81,$81,$81,$80,$81,$80,$82
 TitleEnd:
 GameTile:
@@ -91,19 +91,19 @@ GameTileMntEnd:
 GameTileEnd:
 SoundNotesCh1:
 REPT 100
-	DB %10110010, %00000110			; g3  
+	DB %10110010, %00000110			; g3
 	DB %00000000, %00000000			; ---
 	DB %10110010, %00000110			; g3
 	DB %00000000, %00000000			; ---
 	DB %11100111, %00000110			; a#3
 	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4 
+	DB %00100001, %00000111			; d4
 	DB %00000000, %00000000			; ---
-	DB %00111001, %00000111			; e4 
+	DB %00111001, %00000111			; e4
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4 
+	DB %00100001, %00000111			; d4
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
@@ -113,9 +113,9 @@ REPT 100
 	DB %00000000, %00000000			; ---
 	DB %11010110, %00000110			; a3
 	DB %00000000, %00000000			; ---
-	DB %00100001, %00000111			; d4  
+	DB %00100001, %00000111			; d4
 	DB %00000000, %00000000			; ---
-	DB %00111001, %00000111			; e4  
+	DB %00111001, %00000111			; e4
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
 	DB %00000000, %00000000			; ---
@@ -152,22 +152,22 @@ init:
 	ld [rBGP], a		; set background and window pallette
 	ldh [rOBP0], a		; set sprite pallette 0
 	ldh [rOBP1], a		; 1 (choose palette 0 or 1 when describing the sprite)
-	
+
 	ld a, 0				; SET SCREEN TO TO UPPER RIGHT HAND CORNER
 	ld [rSCX], a
 	ld [rSCY], a
-	
+
 	call StopLCD		; YOU CAN NOT LOAD $8000 WITH LCD ON
 	ld hl, TileData
 	ld de, _VRAM		; $8000
 	ld bc, TileDataEnd - TileData
 	call mem_CopyMono	; load tile data
-	
+
 	ld hl, GameTile
 	ld de, _VRAM + $800
 	ld bc, GameTileEnd - GameTile
 	call mem_CopyVRAM
-	
+
 	ld a, 0
 	ld hl, OAMDATALOC
 	ld bc, OAMDATALENGTH
@@ -191,14 +191,14 @@ init:
 	ld [Sprite0Flags], a
 	ld [scrollX], a
 	ld [scrollX+1], a
-	
+
 ; sound pointer init
 	ld hl, SoundNotesCh1
 	ld a, h
 	ld [songPtr+1], a
 	ld a, l
 	ld [songPtr], a ; little endian
-	
+
 	ld a, songTimerSpeed
 	ld [songTimer], a
 
@@ -207,7 +207,7 @@ init:
 	ld de, _SCRN0+(SCRN_VY_B*0)
 	ld bc, TitleEnd-Title
 	call mem_CopyVRAM
-	
+
 ;um hi, make hblank trigger lcdc interrupt
 	ld	a, STATF_MODE00
 	ld	[rSTAT], a
@@ -219,12 +219,12 @@ init:
 	ld [rNR50], a ; turn on both speakers
 	ld a, $ff
 	ld [rNR51], a ; direct all channels to all speakers
-	
+
 ; sound ch1
 	ld a, %00000000
 	ld [rNR10], a ; no sweep
 	ld a, %01000000 ; DDLLLLLL - Duty (00:12.5% 01:25% 10:50% 11:75%), length
-	ld [rNR11], a ; set duty and length 
+	ld [rNR11], a ; set duty and length
 	ld a, %11110000 ; VVVVDSSS - initial value, 0=dec 1=inc, num of env sweep
 	ld [rNR12], a ; envelope
 	ld a, %00001001
@@ -243,16 +243,16 @@ init:
 MainLoop:
 	halt
 	nop					; always put NOP after HALT
-	
+
 	ld a, [VBLANKED]
 	or a				; V-Blank interrupt ?
 	jr z, MainLoop		; No, some other interrupt
 	xor a
 	ld [VBLANKED], a	; clear flag
-	
+
 	call music
-	
-	; 16-bit scroller variable increment 
+
+	; 16-bit scroller variable increment
 	ld a, [scrollX]
 	ld c, a
 	ld a, [scrollX+1]
@@ -262,43 +262,43 @@ MainLoop:
 	ld [scrollX+1], a
 	ld a, c
 	ld [scrollX], a
-	
+
 	srl b
 	rr c
 	srl b
 	rr c
 	ld a, c
 	ld [rSCX], a		; mountains move at 1/4 pixels per second
-	
+
 	call PLXTable		; generate parallax table
-	
+
 	call	GetKeys
-	
+
 	push	af
 	and	PADF_RIGHT
 	call	nz,right
 	pop	af
-	
+
 	push	af
 	and	PADF_LEFT
 	call	nz,left
 	pop	af
-	
+
 	push	af
 	and	PADF_UP
 	call	nz,up
 	pop	af
-	
+
 	push	af
 	and	PADF_DOWN
 	call	nz,down
 	pop	af
-	
+
 	push	af
 	and	PADF_START
 	call	nz,Yflip
 	pop	af
-	
+
 	jr	MainLoop
 
 right:
@@ -344,13 +344,13 @@ music::
 	jp nz, .notyet
 	; reset the timer for later
 	ld [hl], songTimerSpeed
-	
+
 	; load the byte from songPtr's deref'd loc...
 	ld a, [songPtr+1]
 	ld h, a
 	ld a, [songPtr]
 	ld l, a ; hl contains songPtr word
-	
+
 	ld a, [hl]
 	ld b, a
 	inc hl
@@ -358,7 +358,7 @@ music::
 	ld h, b
 	ld l, a ; hl contains dereferenced songPtr word. h=lofreq, l=hifreq
 	; check if we need to skip it
-	
+
 	ld a, l
 	and a
 	jp nz, .oknote
@@ -367,7 +367,7 @@ music::
 	jp nz, .oknote
 	; uh oh this is a silent note, let's bail
 	jp .nochange
-	
+
 .oknote:
 	; set the useless sound registers
 	ld a, %00000000 ; no sweep
@@ -413,30 +413,30 @@ PLXTable::
 	push af			; save relative scanline
 	add PLXStart	; make it absolute scanline
 	push hl
-	
+
 	sub PLXOffset
 	ld h, a				; h = scanline - 75
-	
+
 	ld a, [scrollX]
 	ld e, a
 	ld a, [scrollX+1]
 	ld d, a				; de = scrollX 16bit
-	
+
 	ld a, h				; a = (scanline - 75)
 	sra a				; a = (scanline - 75) >> 1
 	ld c, a				; c = ^^
 	ld b, 0
 	call Mul16			; hl = (scrollX * (scanline - 75) >> 1)
-	
+
 	srl h
 	rr l
 	srl h
 	rr l
 	srl h
 	rr l				; hl = (scrollX * (scanline - 75) >> 1) >> 3
-	
+
 	ld a, l				; a = LSB of that function
-	
+
 	pop hl
 	ld [hl+], a		; save to ram at index, increment hl
 	ld [hl+], a		; each scroll layer is 2px
@@ -454,25 +454,25 @@ PLXTable::
 LCDC_STAT:
 	push af
 	push hl
-	
+
 	ld a, [rLY]			; read scanline
 	ld h, PLXStart		; would be -1; too many clock cycles. let's not...
 	cp h
 	jp C, endLCDC		; if scanLine < LayerGrassStart, go to the end
-	
+
 	ld h, PLXEnd
 	cp h
 	jp NC, endLCDC		; if scanline >= LayerTrackStart, go to the end
-	
+
 	; read from the array
 	sub PLXStart		; a = index
 	ld hl, plxTable		; hopefully the LSB of the location of plxTable in mem
 	add a, l			; is low enough that this add doesn't overflow
 	ld l, a
 	ld a, [hl]			; load that byte
-	
+
 	ld [rSCX], a		; then set it as scroll var
-	
+
 endLCDC:
 	pop hl
 	pop af

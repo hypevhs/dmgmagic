@@ -15,7 +15,7 @@ def main():
 	PERIOD = int(sys.argv[1])
 	AMPLITUDE = int(sys.argv[2])
 	OUTPUTFILENAME = sys.argv[3]
-	
+
 	outputBytes = bytearray(PERIOD)
 	for index in range(PERIOD):
 		angleUnit = index / float(PERIOD)

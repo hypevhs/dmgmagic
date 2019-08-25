@@ -10,7 +10,7 @@ def main():
 	if len(sys.argv) == 1:
 		print("no png filename specified")
 		return
-	
+
 	for fileIndex in range(1, len(sys.argv)):
 		pngFileName = sys.argv[fileIndex]
 		doFile(pngFileName)
@@ -20,37 +20,37 @@ def doFile(pngFileName):
 	pngFile = open(pngFileName, "rb")
 	reader = png.Reader(pngFile)
 	rgbdata = reader.asRGB8() # boxed row, flat pixel
-	
+
 	outputFileName = pngFileName+".2bp"
 	outputFile = open(outputFileName, "wb")
-	
+
 	width = rgbdata[0]
 	height = rgbdata[1]
 	if width % 8 != 0 or height % 8 != 0:
 		print("bad png: not 8*n by 8*m")
 		return
 	pixels = list(rgbdata[2])
-	
+
 	widthInTiles = width // 8
 	heightInTiles = height // 8
-	
+
 	for tilesRow in range(heightInTiles):
 		for tilesCol in range(widthInTiles):
 			# from "pixels", populate "thisPixels"
 			thisPixels = []
 			gbPixels = []
-			
+
 			for rowIndex in range(8):
 				y = tilesRow*8+rowIndex
 				xstart = tilesCol*(8*3) # 8 pix
 				xend = xstart+(8*3) # +8 pix
 				thisCol = pixels[y][xstart:xend]
 				thisPixels.append(thisCol)
-			
+
 			# thisPixels should have 8 row, 8*3 col elements
 			assert(len(thisPixels) == 8)
 			assert(len(thisPixels[0]) == 8*3)
-			
+
 			row = 0
 			while row < 8:
 				col = 0
@@ -79,7 +79,7 @@ def doFile(pngFileName):
 					gbPixels.append(gbVal)
 					col += 1
 				row += 1
-			
+
 			# for this 8x8 subtile
 			# loop through gbPixels
 			howManyBits = 8*8*2

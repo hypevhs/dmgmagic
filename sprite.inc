@@ -84,7 +84,7 @@ PutSpriteXAddr:	MACRO
 PutSpriteYAddr:	MACRO
 		push	af
 		ld	a,\2
-		add	16	
+		add	16
 		IF ((STRIN("0123456789$",STRSUB("\1",1,1))==0) && (STRIN("a",STRLWR("\1"))==0) && (STRIN("b",STRLWR("\1"))==0) && (STRIN("c",STRLWR("\1"))==0) && (STRIN("d",STRLWR("\1"))==0) && (STRIN("e",STRLWR("\1"))==0) && (STRIN("h",STRLWR("\1"))==0) && (STRIN("l",STRLWR("\1"))==0)) ; not a # or an 8-bit register
 		ld	[\1YAddr],a
 		ELSE
