@@ -1,7 +1,7 @@
 ASM=main.asm
 OBJ="$(ASM).o"
 ROM="$(ASM).gb"
-SYM="$(ROM).sym"
+SYM="$(ASM).sym"
 TILEGENPY=./tilegen.py
 #WAVEGENPY=./wavegen.py
 TILES=$(wildcard *.png)
