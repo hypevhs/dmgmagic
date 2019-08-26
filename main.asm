@@ -172,10 +172,14 @@ begin:
 ; *****************************************************************************
 ; Main code
 ; *****************************************************************************
-; general init
+; init WRAM things
 	xor a
+	ld [VBLANKED], a
 	ld [scrollX], a
 	ld [scrollX+1], a
+	ld hl, plxTable
+	ld bc, PLXLength
+	call mem_Set
 
 ; sprite metadata
 	PutSpriteYAddr Sprite0, 0	; necessary because X or Y=$00 is offscreen
