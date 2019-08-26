@@ -178,12 +178,10 @@ begin:
 	ld [scrollX+1], a
 
 ; sprite metadata
-	PutSpriteYAddr Sprite0, 0	; set Sprite0 location to 0,0
+	PutSpriteYAddr Sprite0, 0	; necessary because X or Y=$00 is offscreen
 	PutSpriteXAddr Sprite0, 0
 	ld a, 1						; happy face :-)
-	ld [Sprite0TileNum], a		; tile address
-	ld a, %00000000				; gbhw.inc 33-42
-	ld [Sprite0Flags], a
+	ld [Sprite0TileNum], a
 ; all done with setup, begin interrupts
 	ei
 
