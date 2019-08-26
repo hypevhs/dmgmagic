@@ -45,6 +45,9 @@ RST_38:		jp $100
 
 ; Interrupts
 SECTION "VBlank", ROM0[$0040]
+	; copy OAM, though it's a frame out of date
+	; this also sets VBLANKED so that when the DMA is RETI'd
+	; the game logic after MainLoop's HALT will execute
 	jp DMACODELOC
 SECTION "LCDC", ROM0[$0048]
 	jp LCDC_STAT
@@ -111,13 +114,8 @@ begin:
 	di
 	ld sp, $ffff			; set the stack pointer to highest mem location + 1
 
-; NEXT FOUR LINES FOR SETTING UP SPRITES *hs*
 	call initdma			; move routine to HRAM
-	ld a, IEF_LCDC | IEF_VBLANK
-	ld [rIE], a				; ENABLE VBLANK INTERRUPT (and lcdc)
-	ei						; LET THE INTS FLY
 
-init:
 	ld a, %11100100		; Window palette colors, from darkest to lightest
 	ld [rBGP], a		; set background and window pallette
 	ldh [rOBP0], a		; set sprite pallette 0
@@ -138,29 +136,20 @@ init:
 	ld bc, GameTileEnd - GameTile
 	call mem_CopyVRAM
 
+; clear out OAM (in RAM)
 	ld a, 0
 	ld hl, OAMDATALOC
 	ld bc, OAMDATALENGTH
-	call mem_Set		; *hs* erase sprite table
+	call mem_Set
 
-	ld a, LCDCF_ON|LCDCF_BG8000|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
-	ld [rLCDC], a		; LCD back on
+; DMA OAM
+	call DMACODELOC
 
+; clear tiles
 	ld a, 32			; ascii for space
 	ld hl, _SCRN0
 	ld bc, SCRN_VX_B * SCRN_VY_B
 	call mem_SetVRAM
-; *****************************************************************************
-; Main code
-; *****************************************************************************
-; general init
-	xor a
-	ld [Sprite0YAddr], a
-	ld [Sprite0XAddr], a
-	ld [Sprite0TileNum], a
-	ld [Sprite0Flags], a
-	ld [scrollX], a
-	ld [scrollX+1], a
 
 ; write those tiles from ROM!
 	ld hl,Title
@@ -168,9 +157,25 @@ init:
 	ld bc, TitleEnd-Title
 	call mem_CopyVRAM
 
-;um hi, make hblank trigger lcdc interrupt
+; enable vblank and LCDC interrupts
+	ld a, IEF_LCDC | IEF_VBLANK
+	ld [rIE], a
+
+; enable hblank interrupt for LCDC
 	ld	a, STATF_MODE00
 	ld	[rSTAT], a
+
+; start screen again
+	ld a, LCDCF_ON|LCDCF_BG8000|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
+	ld [rLCDC], a		; LCD back on
+
+; *****************************************************************************
+; Main code
+; *****************************************************************************
+; general init
+	xor a
+	ld [scrollX], a
+	ld [scrollX+1], a
 
 ; sprite metadata
 	PutSpriteYAddr Sprite0, 0	; set Sprite0 location to 0,0
@@ -179,6 +184,8 @@ init:
 	ld [Sprite0TileNum], a		; tile address
 	ld a, %00000000				; gbhw.inc 33-42
 	ld [Sprite0Flags], a
+; all done with setup, begin interrupts
+	ei
 
 MainLoop:
 	halt

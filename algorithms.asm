@@ -87,6 +87,7 @@ initdma:
 	ld bc, dmaend-dmacode
 	call mem_CopyVRAM	; copy when VRAM is available
 	ret
+
 dmacode:
 	push af
 	push bc
