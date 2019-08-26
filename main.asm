@@ -60,8 +60,8 @@ SECTION "p1thru4", ROM0[$0060]
 
 ; boot loader jumps to here.
 SECTION "start", ROM0[$0100]
-nop
-jp begin
+	nop
+	jp begin
 
 ; *****************************************************************************
 ; header and and hardcoded data
@@ -112,9 +112,9 @@ GameTileEnd:
 begin:
 	nop
 	di
-	ld sp, $ffff			; set the stack pointer to highest mem location + 1
+	ld sp, $ffff		; set the stack pointer to highest mem location + 1
 
-	call initdma			; move routine to HRAM
+	call initdma		; move routine to HRAM
 
 	ld a, %11100100		; Window palette colors, from darkest to lightest
 	ld [rBGP], a		; set background and window pallette
