@@ -27,21 +27,21 @@ scrollX:	DS 2
 
 ; RST jump vectors
 SECTION "Org $0000", ROM0[$0000]
-RST_00:		jp $100
+RST_00:		ld b, b
 SECTION "Org $0008", ROM0[$0008]
-RST_08:		jp $100
+RST_08:		ld b, b
 SECTION "Org $0010", ROM0[$0010]
-RST_10:		jp $100
+RST_10:		ld b, b
 SECTION "Org $0018", ROM0[$0018]
-RST_18:		jp $100
+RST_18:		ld b, b
 SECTION "Org $0020", ROM0[$0020]
-RST_20:		jp $100
+RST_20:		ld b, b
 SECTION "Org $0028", ROM0[$0028]
-RST_28:		jp $100
+RST_28:		ld b, b
 SECTION "Org $0030", ROM0[$0030]
-RST_30:		jp $100
+RST_30:		ld b, b
 SECTION "Org $0038", ROM0[$0038]
-RST_38:		jp $100
+RST_38:		ld b, b
 
 ; Interrupts
 SECTION "VBlank", ROM0[$0040]
