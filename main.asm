@@ -66,7 +66,54 @@ SECTION "start", ROM0[$0100]
 ; *****************************************************************************
 ; header and and hardcoded data
 ; *****************************************************************************
-	ROM_HEADER ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
+SECTION "header", ROM0[$0104]
+	; $0104-$0133 (Nintendo logo - do _not_ modify the logo data here or the GB
+	; will not run the program)
+	NINTENDO_LOGO
+
+	; $0134-$013E (Game title - up to 11 upper case ASCII characters; pad with $00)
+	;	 0123456789ABCDE
+	db	"AvgDayCowboyV01"
+
+	; $0143 (Game Boy Color compatibility code)
+	db	$00		; $00 - DMG
+				; $80 - DMG/GBC
+				; $C0 - GBC Only cartridge
+
+	; $0144 (High-nibble of license code - normally $00 if $014B != $33)
+	db	0
+
+	; $0145 (Low-nibble of license code - normally $00 if $014B != $33)
+	db	0
+
+	; $0146 (Game Boy/Super Game Boy indicator)
+	db	0
+
+	; $0147 (Cartridge type - all Game Boy Color cartridges are at least $19)
+	db	$19	; $19 - MBC5
+
+	; $0148 (ROM size)
+	db	$4	; $4 = 512Kb (32 banks)
+
+	; $0149 (RAM size)
+	db	0	; $00 - None
+
+	; $014A (Destination code)
+	db	1	; $01 - All others
+			; $00 - Japan
+
+	; $014B (Licensee code - this _must_ be $33)
+	db	$33	; $33 - Check $0144/$0145 for Licensee code.
+
+	; $014C (Mask ROM version)
+	db	0
+
+	; $014D (Complement check - handled by post-linking tool)
+	db	0
+
+	; $014E-$014F (Cartridge checksum - handled by post-linking tool)
+	dw	0
+
 INCLUDE "memory.asm"
 TileData:
 	chr_IBMPC1 1, 4 ; some character set
