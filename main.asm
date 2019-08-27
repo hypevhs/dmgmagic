@@ -16,9 +16,16 @@ PLXEnd EQU $0f * 8 ; 120
 PLXLength EQU PLXEnd - PLXStart ; 40
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
+MusicRAMLength EQU $80
 
 ; RAM variables
 SECTION "RAM", WRAM0
+MusicRAM:
+GBCFlag:	DS 1
+GBAFlag:	DS 1
+SndEnabled:	DS 1
+MusicRAMEnd:
+			DS MusicRAMLength-(MusicRAMEnd-MusicRAM) ; pad to size
 plxTable:	DS PLXLength
 VBLANKED:	DS 1
 scrollX:	DS 2
@@ -117,6 +124,19 @@ SECTION "header", ROM0[$0104]
 	; $014E-$014F (Cartridge checksum - handled by post-linking tool)
 	dw	0
 
+SECTION "Music in ROM0", ROM0[$0500]
+MusicLoad EQU $0500		; deflemask-generated .GBS have procedures
+MusicInit EQU $05ec		; at these locations
+MusicPlay EQU $0544		; see also: https://github.com/DevEd2/Deflemask2GB
+	; music code
+	; darkman.gbs
+	;
+	; size			$1eaf (7855_10)
+	; offset		$0070
+	; includedSize	$1e3f
+	incbin "darkman.gbs",$70,$1e3f
+
+SECTION "ROM data", ROM0
 INCLUDE "memory.asm"
 TileData:
 	chr_IBMPC1 1, 4 ; some character set
@@ -159,6 +179,8 @@ GameTileEnd:
 ; *****************************************************************************
 ; Initialization
 ; *****************************************************************************
+
+SECTION "Main code", ROM0
 begin:
 	nop
 	di
@@ -231,6 +253,17 @@ begin:
 	ld bc, PLXLength
 	call mem_Set
 
+; music RAM and code init
+	xor a
+	ld hl, MusicRAM
+	ld bc, MusicRAMLength
+	call mem_Set
+	; GBCFlag = 0, GBAFlag = 0
+	ld a, 1
+	ld [SndEnabled], a
+	call MusicLoad
+	call MusicInit
+
 ; sprite metadata
 	PutSpriteYAddr Sprite0, 0	; necessary because X=Y=$00 is offscreen
 	PutSpriteXAddr Sprite0, 0
@@ -249,6 +282,8 @@ MainLoop:
 	jr z, MainLoop		; No, some other interrupt
 	xor a
 	ld [VBLANKED], a	; clear flag
+
+	call MusicPlay		; every VBlank, jump into the .gbs file to play music
 
 	; 16-bit scroller variable increment
 	ld a, [scrollX]
