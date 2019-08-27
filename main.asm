@@ -232,11 +232,12 @@ begin:
 	call mem_Set
 
 ; sprite metadata
-	PutSpriteYAddr Sprite0, 0	; necessary because X or Y=$00 is offscreen
+	PutSpriteYAddr Sprite0, 0	; necessary because X=Y=$00 is offscreen
 	PutSpriteXAddr Sprite0, 0
 	ld a, 1						; happy face :-)
 	ld [Sprite0TileNum], a
-; all done with setup, begin interrupts
+
+; all done with setup, begin interrupts and MainLoop
 	ei
 
 MainLoop:
