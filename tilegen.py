@@ -103,7 +103,6 @@ def doFile(pngFileName):
 				outputBytes[row*2+1] = hiByte
 				row += 1
 			outputFile.write(outputBytes)
-			print(binascii.hexlify(outputBytes))
 	outputFile.close()
 
 main()
