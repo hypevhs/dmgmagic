@@ -158,8 +158,7 @@ begin:
 	call mem_CopyVRAM
 
 ; enable vblank and LCDC interrupts
-	;ld a, IEF_LCDC | IEF_VBLANK
-	ld a, IEF_VBLANK
+	ld a, IEF_LCDC | IEF_VBLANK
 	ld [rIE], a
 
 ; enable hblank interrupt for LCDC
@@ -218,7 +217,7 @@ MainLoop:
 	ld a, c
 	ld [rSCX], a		; mountains move at 1/4 pixels per second
 
-	;call PLXTable		; generate parallax table
+	call PLXTable		; generate parallax table
 
 	call	GetKeys
 
