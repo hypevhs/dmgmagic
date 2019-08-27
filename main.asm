@@ -19,11 +19,14 @@ ScreenHeight EQU $12 * 8
 
 ; RAM variables
 SECTION "RAM", WRAM0
-	SpriteAttr Sprite0
-OAMData:	DS $a0				; shitty macro protection
 plxTable:	DS PLXLength
 VBLANKED:	DS 1
 scrollX:	DS 2
+
+; WRAMX variables. first $a0 bytes are Fake OAM
+SECTION "RAM1", WRAM0[$d000]
+	SpriteAttr Sprite0
+OAMData:	DS $a0				; shitty macro protection
 
 ; RST jump vectors
 SECTION "Org $0000", ROM0[$0000]
