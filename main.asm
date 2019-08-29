@@ -1,11 +1,3 @@
-; Hello Sprite
-; originl version February 17, 2007
-; John Harrison
-; An extension of Hello World, based mostly from GALP
-
-;* 2008-May-01 --- V1.0a
-;*                 replaced reference of hello-sprite.inc with sprite.inc
-
 INCLUDE "gbhw.inc" ; standard hardware definitions from devrs.com
 INCLUDE "ibmpc1.inc" ; ASCII character set from devrs.com
 INCLUDE "sprite.inc" ; specific defs
@@ -91,43 +83,43 @@ SECTION "header", ROM0[$0104]
 	db	"AvgDayCowboyV01"
 
 	; $0143 (Game Boy Color compatibility code)
-	db	$00		; $00 - DMG
+	db $00		; $00 - DMG
 				; $80 - DMG/GBC
 				; $C0 - GBC Only cartridge
 
 	; $0144 (High-nibble of license code - normally $00 if $014B != $33)
-	db	0
+	db 0
 
 	; $0145 (Low-nibble of license code - normally $00 if $014B != $33)
-	db	0
+	db 0
 
 	; $0146 (Game Boy/Super Game Boy indicator)
-	db	0
+	db 0
 
 	; $0147 (Cartridge type - all Game Boy Color cartridges are at least $19)
-	db	$19	; $19 - MBC5
+	db $19	; $19 - MBC5
 
 	; $0148 (ROM size)
-	db	$4	; $4 = 512Kb (32 banks)
+	db $4	; $4 = 512Kb (32 banks)
 
 	; $0149 (RAM size)
-	db	0	; $00 - None
+	db 0	; $00 - None
 
 	; $014A (Destination code)
-	db	1	; $01 - All others
+	db 1	; $01 - All others
 			; $00 - Japan
 
 	; $014B (Licensee code - this _must_ be $33)
-	db	$33	; $33 - Check $0144/$0145 for Licensee code.
+	db $33	; $33 - Check $0144/$0145 for Licensee code.
 
 	; $014C (Mask ROM version)
-	db	0
+	db 0
 
 	; $014D (Complement check - handled by post-linking tool)
-	db	0
+	db 0
 
 	; $014E-$014F (Cartridge checksum - handled by post-linking tool)
-	dw	0
+	dw 0
 
 SECTION "Music in ROM0", ROM0[$0500]
 MusicLoad EQU $0500		; deflemask-generated .GBS have procedures
@@ -336,34 +328,34 @@ MainLoop:
 	ld a, PLXStart
 	ld [rLYC], a		; interrupt when rLY is at the first parallax line
 
-	call	GetKeys
+	call GetKeys
 
-	push	af
-	and	PADF_RIGHT
-	call	nz,right
-	pop	af
+	push af
+	and PADF_RIGHT
+	call nz,right
+	pop af
 
-	push	af
-	and	PADF_LEFT
-	call	nz,left
-	pop	af
+	push af
+	and PADF_LEFT
+	call nz,left
+	pop af
 
-	push	af
-	and	PADF_UP
-	call	nz,up
-	pop	af
+	push af
+	and PADF_UP
+	call nz,up
+	pop af
 
-	push	af
-	and	PADF_DOWN
-	call	nz,down
-	pop	af
+	push af
+	and PADF_DOWN
+	call nz,down
+	pop af
 
-	push	af
-	and	PADF_START
-	call	nz,Yflip
-	pop	af
+	push af
+	and PADF_START
+	call nz,Yflip
+	pop af
 
-	jr	MainLoop
+	jr MainLoop
 
 right:
 	GetSpriteXAddr Sprite0
