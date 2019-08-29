@@ -287,11 +287,18 @@ begin:
 ; all done with setup, begin interrupts
 ; (even though the music funcs already did, most likely)
 ; also, because I DMA'd earlier, need to reset this flag
-; because we're likely halfway down the screen
+; because we're likely halfway down the screen instead
 	xor a
 	ld [VBLANKED], a
+; also also, we don't use the timer for anything,
+; but the music init funcs enable it, for some reason.
+; it fucks with our interrupts, so turn it off
+	ld hl, rIE
+	res 2, [hl]
+	ld hl, rTAC
+	res 2, [hl]
+; begin interrupts, then move on to mainloop
 	ei
-; then move on to mainloop
 
 MainLoop:
 	halt
@@ -299,12 +306,12 @@ MainLoop:
 
 	ld a, [VBLANKED]
 	; TODO: vblank can execute right here and cause a skipped frame...
-	or a				; V-Blank interrupt ?
-	jr z, MainLoop		; No, some other interrupt
+	or a
+	jr z, MainLoop		; halt-loop until vblank
 	xor a
-	ld [VBLANKED], a	; clear flag
+	ld [VBLANKED], a
 
-	call MusicPlay		; every VBlank, jump into the .gbs file to play music
+	call MusicPlay		; every frame, jump into the .gbs file to play music
 
 	; 16-bit scroller variable increment
 	ld a, [scrollX]
