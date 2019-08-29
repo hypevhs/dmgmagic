@@ -78,6 +78,10 @@ StopLCD:
 	ld a, [rLCDC]	; Turn off the LCD
 	res 7, a		; Reset bit 7 of LCDC
 	ld [rLCDC], a
+	ld a, [rIF]		; also clear stale LCD int requests
+	res 0, a
+	res 1, a
+	ld [rIF], a
 	ret
 
 ; *hs* START

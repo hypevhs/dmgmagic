@@ -11,24 +11,29 @@ INCLUDE "ibmpc1.inc" ; ASCII character set from devrs.com
 INCLUDE "sprite.inc" ; specific defs
 
 ; constants
-PLXStart EQU $0a * 8 ; 80
-PLXEnd EQU $0f * 8 ; 120
+PLXStart EQU $0a * 8 ; 80, $50
+PLXEnd EQU $0f * 8 ; 120, $78
 PLXLength EQU PLXEnd - PLXStart ; 40
 PLXOffset EQU 75
 ScreenHeight EQU $12 * 8
 MusicRAMLength EQU $80
 
 ; RAM variables
-SECTION "RAM", WRAM0
+; music RAM section must not move from this offset
+SECTION "Music RAM", WRAM0[$c000]
 MusicRAM:
 GBCFlag:	DS 1
 GBAFlag:	DS 1
 SndEnabled:	DS 1
 MusicRAMEnd:
 			DS MusicRAMLength-(MusicRAMEnd-MusicRAM) ; pad to size
-plxTable:	DS PLXLength
+
+SECTION "Regular RAM", WRAM0
 VBLANKED:	DS 1
 scrollX:	DS 2
+
+SECTION "Parallax Table", WRAM0, ALIGN[8]
+plxTable:	DS PLXLength		; $100-aligned
 
 ; WRAMX variables. first $a0 bytes are Fake OAM
 SECTION "RAM1", WRAM0[$d000]
@@ -229,22 +234,30 @@ begin:
 	ld bc, TitleEnd-Title
 	call mem_CopyVRAM
 
+	di			; before we set IE, lots of the above macros/funcs re-enabled
+	ld a, [rIF]	; IME with reti or ei.
+	res 0, a	; we don't want vblank before we're done with initialization.
+	res 1, a	; while we're at it, clear stale LCD interrupt flags,
+	ld [rIF], a	; just in case
+
 ; enable vblank and LCDC interrupts
 	ld a, IEF_LCDC | IEF_VBLANK
 	ld [rIE], a
 
-; enable hblank interrupt for LCDC
-	ld	a, STATF_MODE00
-	ld	[rSTAT], a
+; enable y-coincidence interrupt for LCDC
+	ld a, $ff
+	ld [rLYC], a		; LY never reaches above 153 ($99) so === disabled
+	ld a, STATF_LYC
+	ld [rSTAT], a
 
 ; start screen again
 	ld a, LCDCF_ON|LCDCF_BG8000|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
-	ld [rLCDC], a		; LCD back on
+	ld [rLCDC], a
 
 ; *****************************************************************************
 ; Main code
 ; *****************************************************************************
-; init WRAM things
+; zero out WRAM things
 	xor a
 	ld [VBLANKED], a
 	ld [scrollX], a
@@ -252,6 +265,12 @@ begin:
 	ld hl, plxTable
 	ld bc, PLXLength
 	call mem_Set
+
+; sprite metadata
+	PutSpriteYAddr Sprite0, 0	; necessary because X=Y=$00 is offscreen
+	PutSpriteXAddr Sprite0, 0
+	ld a, 1						; happy face :-)
+	ld [Sprite0TileNum], a
 
 ; music RAM and code init
 	xor a
@@ -261,23 +280,33 @@ begin:
 	; GBCFlag = 0, GBAFlag = 0
 	ld a, 1
 	ld [SndEnabled], a
+	; the init funcs don't set any registers before using them. undefined
+	; behavior? zeroing out seems to work.
+	xor a
+	ld b,a
+	ld c,a
+	ld d,a
+	ld e,a
+	ld h,a
+	ld l,a
 	call MusicLoad
 	call MusicInit
 
-; sprite metadata
-	PutSpriteYAddr Sprite0, 0	; necessary because X=Y=$00 is offscreen
-	PutSpriteXAddr Sprite0, 0
-	ld a, 1						; happy face :-)
-	ld [Sprite0TileNum], a
-
-; all done with setup, begin interrupts and MainLoop
+; all done with setup, begin interrupts
+; (even though the music funcs already did, most likely)
+; also, because I DMA'd earlier, need to reset this flag
+; because we're likely halfway down the screen
+	xor a
+	ld [VBLANKED], a
 	ei
+; then move on to mainloop
 
 MainLoop:
 	halt
 	nop					; always put NOP after HALT
 
 	ld a, [VBLANKED]
+	; TODO: vblank can execute right here and cause a skipped frame...
 	or a				; V-Blank interrupt ?
 	jr z, MainLoop		; No, some other interrupt
 	xor a
@@ -304,6 +333,8 @@ MainLoop:
 	ld [rSCX], a		; mountains move at 1/4 pixels per second
 
 	call PLXTable		; generate parallax table
+	ld a, PLXStart
+	ld [rLYC], a		; interrupt when rLY is at the first parallax line
 
 	call	GetKeys
 
@@ -372,7 +403,7 @@ Yflip:
 ; PLXTable - compute each scanline's scroll value
 ; *****************************************************************************
 PLXTable::
-	xor a
+	xor a			; a = first scanline
 	ld hl, plxTable
 .loop:
 	push af			; save relative scanline
@@ -419,25 +450,28 @@ PLXTable::
 LCDC_STAT:
 	push af
 	push hl
+.wait_hblank:			; spinloop until hblank
+	ld a, [rSTAT]
+	and %00000011		; if LCD mode bits are set (ie not in mode 0)
+	jp nz, .wait_hblank
 
 	ld a, [rLY]			; read scanline
-	ld h, PLXStart		; would be -1; too many clock cycles. let's not...
-	cp h
-	jp C, endLCDC		; if scanLine < LayerGrassStart, go to the end
-
 	ld h, PLXEnd
-	cp h
-	jp NC, endLCDC		; if scanline >= LayerTrackStart, go to the end
+	cp h				; if scanline >= LayerTrackStart, go to the end
+	jp NC, endLCDC		; rLYC isn't updated, so this ends parallax til vblank
 
-	; read from the array
+	; todo: any optimizations from $100-alignment?
 	sub PLXStart		; a = index
-	ld hl, plxTable		; hopefully the LSB of the location of plxTable in mem
-	add a, l			; is low enough that this add doesn't overflow
-	ld l, a
-	ld a, [hl]			; load that byte
+	ld hl, plxTable		; hl = scroll table start
+	add a, l			; hl += index
+	ld l, a				; (which is low enough that this add doesn't overflow)
+	ld a, [hl]			; load from scroll table
 
-	ld [rSCX], a		; then set it as scroll var
+	ld [rSCX], a		; scroll the window
 
+	ld a, [rLYC]
+	add a, 4
+	ld [rLYC], a		; see you again in 4 lines
 endLCDC:
 	pop hl
 	pop af
