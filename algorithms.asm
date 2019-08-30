@@ -1,3 +1,4 @@
+SECTION "Runtime algorithms", ROM0
 Mul8b:					; this routine performs the operation HL=H*E
 	ld d, 0				; clearing D and L
 	ld l, d
@@ -65,6 +66,7 @@ GetKeys:			; gets keypress
 	or b			; combine with the previous result
 	ret				; do we need to reset joypad? (gbspec line 1082)
 
+SECTION "Init algorithms", ROMX, BANK[10]
 ; StopLCD:
 ; turn off LCD if it is on and wait until the LCD is off
 StopLCD:

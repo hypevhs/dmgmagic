@@ -14,9 +14,16 @@ MusicRAMLength EQU $80
 ; music RAM section must not move from this offset
 SECTION "Music RAM", WRAM0[$c000]
 MusicRAM:
-GBCFlag:	DS 1
+GBCFlag:	DS 1	;c000
 GBAFlag:	DS 1
 SndEnabled:	DS 1
+ROMBank:	DS 1
+Unk04:		DS 1	;c004
+Unk05:		DS 1
+Unk06:		DS 1
+Unk07:		DS 1
+Unk08:		DS 1	;c008
+Unk09:		DS 1
 MusicRAMEnd:
 			DS MusicRAMLength-(MusicRAMEnd-MusicRAM) ; pad to size
 
@@ -68,7 +75,7 @@ SECTION "p1thru4", ROM0[$0060]
 ; boot loader jumps to here.
 SECTION "start", ROM0[$0100]
 	nop
-	jp begin
+	jp entry_point
 
 ; *****************************************************************************
 ; header and and hardcoded data
@@ -131,23 +138,56 @@ MusicPlay EQU $0544		; see also: https://github.com/DevEd2/Deflemask2GB
 	; size			$1eaf (7855_10)
 	; offset		$0070
 	; includedSize	$1e3f
-	incbin "darkman.gbs",$70,$1e3f
+	;incbin "darkman.gbs",$70,$1e3f
 
-SECTION "ROM data", ROM0
+	; industrial.gbs
+	;
+	; size			$15633 (87603_10)
+	;        | offset | bank size | bytes left
+	; -------+--------+-----------+------------
+	; bank 0 | $00070 | $3b00*    | $11ac3 = $15633-$3b00-$70
+	; bank 1 | $03b70 | $4000     | $0dac3 = $11ac3-$4000
+	; bank 2 | $07b70 | $4000     | $09ac3 = $0dac3-$4000
+	; bank 3 | $0bb70 | $4000     | $05ac3 = $09ac3-$4000
+	; bank 4 | $0fb70 | $4000     | $01ac3 = $05ac3-$4000
+	; bank 5 | $13b70 | $1ac3     | 0
+	; total  | $15633 (size ok)
+	;
+	; *$3b00 == bankSize-musicStartAddr == $4000-$0500
+	incbin "industrial.gbs",$00070, $3b00
+SECTION "Music in ROM1", ROMX[$4000], BANK[1]
+ROM1_Music:
+	incbin "industrial.gbs",$03b70, $4000
+SECTION "Music in ROM2", ROMX[$4000], BANK[2]
+ROM2_Music:
+	incbin "industrial.gbs",$07b70, $4000
+SECTION "Music in ROM3", ROMX[$4000], BANK[3]
+ROM3_Music:
+	incbin "industrial.gbs",$0bb70, $4000
+SECTION "Music in ROM4", ROMX[$4000], BANK[4]
+ROM4_Music:
+	incbin "industrial.gbs",$0fb70, $4000
+SECTION "Music in ROM5", ROMX[$4000], BANK[5]
+ROM5_Music:
+	incbin "industrial.gbs",$13b70, $1ac3
+
+SECTION "ROM data", ROMX, BANK[10]
 INCLUDE "memory.asm"
 TileData:
-	chr_IBMPC1 1, 4 ; some character set
+	PUSHO
+	OPT b.X
+	DB	%.XXXXXX.
+	DB	%X......X
+	DB	%X.X..X.X
+	DB	%X......X
+	DB	%X.XXXX.X
+	DB	%X..XX..X
+	DB	%X......X
+	DB	%.XXXXXX.
+	POPO
 TileDataEnd:
 Title:
 	;  [                    ] 20tiles
-	DB "                                "
-	DB "                                "
-	DB "                                "
-	DB "                                "
-	DB "                                "
-	DB "                                "
-
-	DB "                                "
 	DB $85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88,$85,$86,$87,$88
 	DB $89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c,$89,$8a,$8b,$8c
 	DB $8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90,$8d,$8e,$8f,$90
@@ -177,8 +217,36 @@ GameTileEnd:
 ; Initialization
 ; *****************************************************************************
 
-SECTION "Main code", ROM0
-begin:
+BankSelect EQU $2000
+SECTION "Init bootstrap code", ROM0
+entry_point:
+	nop
+	ld a, BANK("Init code")
+	ld [BankSelect], a
+	jp init
+
+SECTION "Music init bootstrap", ROM0
+music_init_bootstrap:
+	nop
+	ld a, 1
+	ld [BankSelect], a
+	; the init funcs don't set any registers before using them. undefined
+	; behavior? zeroing out seems to work.
+	xor a
+	ld b,a
+	ld c,a
+	ld d,a
+	ld e,a
+	ld h,a
+	ld l,a
+	call MusicLoad
+	call MusicInit
+	ld a, 10
+	ld [BankSelect], a
+	ret
+
+SECTION "Init code", ROMX, BANK[10]
+init:
 	nop
 	di
 	ld sp, $ffff		; set the stack pointer to highest mem location + 1
@@ -222,15 +290,16 @@ begin:
 
 ; write those tiles from ROM!
 	ld hl,Title
-	ld de, _SCRN0+(SCRN_VY_B*0)
+	ld de, _SCRN0+(SCRN_VX_B * 7) ; first 7 rows are blank
 	ld bc, TitleEnd-Title
 	call mem_CopyVRAM
 
-	di			; before we set IE, lots of the above macros/funcs re-enabled
-	ld a, [rIF]	; IME with reti or ei.
-	res 0, a	; we don't want vblank before we're done with initialization.
-	res 1, a	; while we're at it, clear stale LCD interrupt flags,
-	ld [rIF], a	; just in case
+; re-disable interrupts
+	di					; before we set IE, lots of the above macros/funcs re-enabled
+	ld a, [rIF]			; IME with reti or ei.
+	res IEF_VBLANK, a	; we don't want vblank before we're done with initialization.
+	res IEF_LCDC, a		; while we're at it, clear stale LCD interrupt flags
+	ld [rIF], a
 
 ; enable vblank and LCDC interrupts
 	ld a, IEF_LCDC | IEF_VBLANK
@@ -246,9 +315,6 @@ begin:
 	ld a, LCDCF_ON|LCDCF_BG8000|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
 	ld [rLCDC], a
 
-; *****************************************************************************
-; Main code
-; *****************************************************************************
 ; zero out WRAM things
 	xor a
 	ld [VBLANKED], a
@@ -261,7 +327,7 @@ begin:
 ; sprite metadata
 	PutSpriteYAddr Sprite0, 0	; necessary because X=Y=$00 is offscreen
 	PutSpriteXAddr Sprite0, 0
-	ld a, 1						; happy face :-)
+	ld a, 0						; happy face :-)
 	ld [Sprite0TileNum], a
 
 ; music RAM and code init
@@ -272,17 +338,7 @@ begin:
 	; GBCFlag = 0, GBAFlag = 0
 	ld a, 1
 	ld [SndEnabled], a
-	; the init funcs don't set any registers before using them. undefined
-	; behavior? zeroing out seems to work.
-	xor a
-	ld b,a
-	ld c,a
-	ld d,a
-	ld e,a
-	ld h,a
-	ld l,a
-	call MusicLoad
-	call MusicInit
+	call music_init_bootstrap
 
 ; all done with setup, begin interrupts
 ; (even though the music funcs already did, most likely)
@@ -299,7 +355,9 @@ begin:
 	res 2, [hl]
 ; begin interrupts, then move on to mainloop
 	ei
+	jp MainLoop
 
+Section "Loop code", ROM0
 MainLoop:
 	halt
 	nop					; always put NOP after HALT
